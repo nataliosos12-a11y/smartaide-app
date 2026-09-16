@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="./icon-192.png" />
 
-  <!-- Tailwind CSS -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Google Fonts -->
@@ -26,15 +26,19 @@
       background-color: #f8fafc;
       color: #1e293b;
     }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
   </style>
 </head>
 <body class="antialiased min-h-screen flex flex-col justify-between">
 
-  <!-- Header & Navigation -->
+  <!-- Header with App Logo & Install Button -->
   <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-xl text-white shadow">⚡</div>
+        <!-- Logo Icon 512 -->
+        <img src="./icon-512.png" alt="SmartAide Logo" class="w-10 h-10 rounded-xl shadow object-cover border border-blue-400/40 bg-blue-600" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>'">
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-xl font-bold">SmartAide-Opt</h1>
@@ -43,12 +47,22 @@
           <p class="text-xs text-slate-400">מערכת AI עירונית לניוד חכם של סייעות שילוב ורפואיות</p>
         </div>
       </div>
-      <nav class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs sm:text-sm">
-        <button id="btn-admin" onclick="showTab('admin')" class="px-3 py-1.5 rounded-lg font-bold bg-blue-600 text-white transition">🏛️ לוח מנהל</button>
-        <button id="btn-parent" onclick="showTab('parent')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">👨‍👩‍👧 הורים</button>
-        <button id="btn-aide" onclick="showTab('aide')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">📱 סייעת</button>
-        <button id="btn-academic" onclick="showTab('academic')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">🎓 סקירה אקדמית</button>
-      </nav>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <!-- Install PWA Button -->
+        <button id="pwa-install-btn" class="hidden px-3 py-1.5 rounded-lg font-bold bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm transition items-center gap-1 shadow">
+          <span>📲</span>
+          <span>התקן למסך הבית</span>
+        </button>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs sm:text-sm">
+          <button id="btn-admin" onclick="showTab('admin')" class="px-3 py-1.5 rounded-lg font-bold bg-blue-600 text-white transition">🏛️ לוח מנהל</button>
+          <button id="btn-parent" onclick="showTab('parent')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">👨‍👩‍👧 הורים</button>
+          <button id="btn-aide" onclick="showTab('aide')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">📱 סייעת</button>
+          <button id="btn-academic" onclick="showTab('academic')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">🎓 סקירה אקדמית</button>
+        </nav>
+      </div>
     </div>
   </header>
 
@@ -58,10 +72,10 @@
     <p id="toast-msg" class="text-sm font-medium"></p>
   </div>
 
-  <!-- Main Views Container -->
+  <!-- Main Content -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
 
-    <!-- 1. ADMIN DASHBOARD VIEW -->
+    <!-- 1. ADMIN DASHBOARD -->
     <div id="tab-admin" class="space-y-6">
       <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -82,7 +96,7 @@
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <p class="text-xs text-slate-500">נוידו היום</p>
           <h3 id="kpi-relocated" class="text-2xl font-black mt-1 text-emerald-600">0</h3>
-          <span class="text-[11px] text-emerald-600 font-medium">נמנע ביטול יום לימודים</span>
+          <span class="text-[11px] text-emerald-600 font-medium">נמנע ביטול לימודים</span>
         </div>
         <div class="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-700 to-indigo-900 text-white p-4 rounded-xl shadow-sm">
           <p class="text-xs text-blue-200">חיסכון להיום</p>
@@ -109,7 +123,7 @@
                 <p class="text-xs text-slate-500">שיבוץ מבוסס אילוצים והסמכות (CSP)</p>
               </div>
               <button onclick="runAlgorithm()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3.5 py-2 rounded-xl font-bold shadow transition">
-                ⚡ הפעל אופטימיזציה
+                ⚡ הפעל שיבוץ
               </button>
             </div>
             <div id="match-results" class="mt-4 space-y-2.5 max-h-60 overflow-y-auto">
@@ -121,7 +135,7 @@
           </div>
           <div class="bg-slate-50 p-2 rounded-lg text-[11px] text-slate-500 flex justify-between">
             <span>זמן חישוב: ~12ms</span>
-            <span>אלגוריתם: Heuristic Constraint Satisfaction</span>
+            <span>אלגוריתם: Heuristic CSP</span>
           </div>
         </div>
       </div>
@@ -136,7 +150,7 @@
       </div>
     </div>
 
-    <!-- 2. PARENT PORTAL VIEW -->
+    <!-- 2. PARENT PORTAL -->
     <div id="tab-parent" class="max-w-md mx-auto bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5 hidden">
       <div class="text-center space-y-1">
         <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto">🧸</div>
@@ -423,11 +437,37 @@
       renderAide();
     }
 
+    // PWA Install Prompt Handler
+    let deferredPrompt;
+    const installBtn = document.getElementById('pwa-install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn) {
+        installBtn.classList.remove('hidden');
+        installBtn.classList.add('inline-flex');
+      }
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          installBtn.classList.add('hidden');
+        }
+        deferredPrompt = null;
+      });
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       renderMap();
       updateKPIs();
     });
 
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
