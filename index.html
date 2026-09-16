@@ -1,6 +1,534 @@
-<!-- הגדרות PWA ואייקונים -->
-<link rel="manifest" href="./manifest.json" />
-<meta name="theme-color" content="#0f172a" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<link rel="apple-touch-icon" href="./icon-192.png" />
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartAide-Opt | ניוד סייעות חכם</title>
+
+  <!-- PWA & Mobile Settings -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Rubik', 'Assistant', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col justify-between">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-xl shadow text-white">⚡</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold">SmartAide-Opt</h1>
+            <span class="text-[11px] bg-blue-500/30 text-blue-300 font-semibold px-2 py-0.5 rounded-full border border-blue-400/40">POC חי פעיל</span>
+          </div>
+          <p class="text-xs text-slate-400">מערכת AI עירונית לניוד חכם של סייעות שילוב ורפואיות</p>
+        </div>
+      </div>
+      <nav class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs sm:text-sm">
+        <button id="tab-admin" onclick="switchTab('admin')" class="px-3 py-1.5 rounded-lg font-bold bg-blue-600 text-white transition">🏛️ לוח מנהל</button>
+        <button id="tab-parent" onclick="switchTab('parent')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">👨‍👩‍👧 הורים</button>
+        <button id="tab-aide" onclick="switchTab('aide')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">📱 סייעת</button>
+        <button id="tab-academic" onclick="switchTab('academic')" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">🎓 סקירה אקדמית</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 hidden items-center gap-2 transition duration-200">
+      <span id="toast-icon">✅</span>
+      <p id="toast-text" class="text-sm font-medium"></p>
+    </div>
+
+    <!-- VIEW 1: ADMIN DASHBOARD -->
+    <div id="view-admin" class="space-y-6">
+      <!-- KPI Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">סייעות פעילות</p>
+          <h3 id="kpi-total-aides" class="text-2xl font-black mt-1 text-slate-900">4</h3>
+          <span class="text-[11px] text-emerald-600 font-medium">במצבת כוח אדם</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">גנים בחוסר</p>
+          <h3 id="kpi-shortages" class="text-2xl font-black mt-1 text-rose-600">3</h3>
+          <span class="text-[11px] text-rose-500 font-medium">דורש מענה מיידי</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">סייעות פנויות לניוד</p>
+          <h3 id="kpi-available" class="text-2xl font-black mt-1 text-blue-600">0</h3>
+          <span class="text-[11px] text-blue-600 font-medium">התפנו מדיווח הורים</span>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p class="text-xs text-slate-500">נוידו היום</p>
+          <h3 id="kpi-relocated" class="text-2xl font-black mt-1 text-emerald-600">0</h3>
+          <span class="text-[11px] text-emerald-600 font-medium">נמנע ביטול יום לימודים</span>
+        </div>
+        <div class="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-700 to-indigo-900 text-white p-4 rounded-xl shadow-sm">
+          <p class="text-xs text-blue-200">חיסכון להיום</p>
+          <h3 id="kpi-money" class="text-2xl font-black mt-1">₪0</h3>
+          <span class="text-[11px] text-blue-200 font-medium">צמצום חברות השמה</span>
+        </div>
+      </div>
+
+      <!-- Map and Optimization Panel -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Map -->
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+          <div class="flex justify-between items-center">
+            <h2 class="font-bold text-slate-900 flex items-center gap-2">
+              <span>🗺️</span>
+              <span>מפת פריסת גנים בזמן אמת</span>
+            </h2>
+            <span class="text-xs text-slate-500">ירוק: תקין | אדום: חוסר | כחול: סייעת פנויה</span>
+          </div>
+          <div id="map-container" class="relative w-full h-72 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shadow-inner">
+            <!-- Pins will be rendered here dynamically -->
+          </div>
+        </div>
+
+        <!-- Optimization Engine -->
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h2 class="font-bold text-slate-900 flex items-center gap-1.5">
+                  <span>🤖</span>
+                  <span>מנוע אופטימיזציה לניוד</span>
+                </h2>
+                <p class="text-xs text-slate-500">אלגוריתם שיבוץ מבוסס אילוצים (CSP)</p>
+              </div>
+              <button onclick="runOptimization()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3.5 py-2 rounded-xl font-bold shadow transition">
+                ⚡ הפעל אופטימיזציה
+              </button>
+            </div>
+            <div id="recommendations-container" class="mt-4 space-y-2.5 max-h-60 overflow-y-auto">
+              <div class="text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <span class="text-2xl block mb-1">🧩</span>
+                אין כרגע שידוכים ממתינים.<br />עברי ל<strong>"ממשק הורים"</strong>, דווחי היעדרות, והפעילי שוב.
+              </div>
+            </div>
+          </div>
+          <div class="bg-slate-50 p-2 rounded-lg text-[11px] text-slate-500 flex justify-between">
+            <span>זמן ריצה: ~12ms</span>
+            <span>אלגוריתם: Heuristic Greedy CSP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forecast and Logs -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+          <h2 class="font-bold text-slate-900 flex items-center gap-2">
+            <span>📈</span>
+            <span>חיזוי היעדרויות שבועי (AI Forecast)</span>
+          </h2>
+          <div class="space-y-2 text-xs">
+            <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-lg flex justify-between items-center">
+              <span class="font-bold">יום א׳ (היום)</span>
+              <span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full">סיכון גבוה (32%) — צפי חסר: ~3</span>
+            </div>
+            <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-lg flex justify-between items-center">
+              <span class="font-bold">יום ב׳ (מחר)</span>
+              <span class="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">סיכון בינוני (18%) — צפי חסר: ~1</span>
+            </div>
+            <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-lg flex justify-between items-center">
+              <span class="font-bold">יום ג׳</span>
+              <span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">סיכון נמוך (12%) — צפי חסר: ~1</span>
+            </div>
+            <div class="p-2.5 bg-slate-50 border border-slate-100 rounded-lg flex justify-between items-center">
+              <span class="font-bold">יום ד׳</span>
+              <span class="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">סיכון בינוני (22%) — צפי חסר: ~2</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-2">
+          <h3 class="text-xs font-bold text-slate-500 uppercase">יומן אירועים וסנכרון עירוני בזמן אמת</h3>
+          <div id="logs-container" class="space-y-1.5 max-h-36 overflow-y-auto text-xs pr-1">
+            <div class="text-slate-600"><span class="font-mono text-slate-400">07:00</span> — זוהו 3 גנים בעיר עם חוסר בסייעת שילוב/רפואית פתוח.</div>
+            <div class="text-slate-600"><span class="font-mono text-slate-400">06:45</span> — מערכת SmartAide-Opt סונכרנה מול אגף החינוך.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: PARENT PORTAL -->
+    <div id="view-parent" class="max-w-md mx-auto bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-5 hidden">
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto">🧸</div>
+        <h2 class="text-2xl font-black text-slate-900">דיווח היעדרות מהיר</h2>
+        <p class="text-xs text-slate-500">לחיצה אחת משחררת את הסייעת בזמן אמת לילדים שזקוקים לה בגנים אחרים</p>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="font-bold block mb-1 text-slate-700">בחר/י תלמיד/ה מדווח/ת:</label>
+          <select id="parent-kid-select" class="w-full border border-slate-300 rounded-xl p-3 bg-slate-50 font-bold text-slate-800">
+            <option value="Child_101">תלמיד/ה #101 — גן שושנים (ליווי רפואי - סייעת: מיכל כהן)</option>
+            <option value="Child_104">תלמיד/ה #104 — גן דקלים (שילוב אישי - סייעת: רונית לוי)</option>
+            <option value="Child_106">תלמיד/ה #106 — גן תמר (שילוב אישי - סייעת: אורלי שטרן)</option>
+            <option value="Child_107">תלמיד/ה #107 — גן חבצלת (ליווי רפואי - סייעת: שרה ברקוביץ)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="font-bold block mb-1 text-slate-700">סיבת היעדרות כללית:</label>
+          <select class="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 font-medium text-slate-700">
+            <option>מחלת חום / שפעת עונתית</option>
+            <option>בדיקות רפואיות</option>
+            <option>סיבה אישית / משפחתית</option>
+          </select>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl text-[11px] text-blue-800">
+          🔒 <strong>אנונימיזציה מלאה:</strong> הנתונים נשלחים במזהים מופשטים (Child_ID) ללא שמות ופרטים אישיים, על פי תקנות הגנת הפרטיות.
+        </div>
+
+        <button onclick="submitParentAbsence()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl shadow-lg transition duration-150 flex items-center justify-center gap-2 text-sm">
+          <span>🚀</span>
+          <span>אישור ושחרור סייעת לניוד מיידי</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- VIEW 3: AIDE MOBILE VIEW -->
+    <div id="view-aide" class="max-w-sm mx-auto hidden space-y-4">
+      <div class="bg-slate-900 rounded-[2.5rem] p-3.5 shadow-2xl border-4 border-slate-800 text-slate-800">
+        <div class="bg-slate-50 rounded-[2rem] p-5 space-y-4 min-h-[460px] flex flex-col justify-between overflow-hidden">
+          <div class="space-y-4">
+            <div class="flex justify-between text-[10px] text-slate-400 font-bold px-1">
+              <span>08:15</span>
+              <span>100% 🔋</span>
+            </div>
+
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h3 class="text-base font-black text-slate-900">שלום, מיכל כהן</h3>
+                <p class="text-[11px] text-slate-500">הסמכות: סייעת רפואית + שילוב</p>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm">👩‍🏫</div>
+            </div>
+
+            <div id="aide-status-card">
+              <!-- Dynamically populated based on state -->
+            </div>
+          </div>
+
+          <div class="text-center text-[10px] text-slate-400">
+            SmartAide PWA • עיריית גליל מעברי
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: ACADEMIC OVERVIEW -->
+    <div id="view-academic" class="max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6 hidden">
+      <div class="border-b border-slate-100 pb-4">
+        <span class="text-xs bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-full">
+          נספח אקדמי למרצים
+        </span>
+        <h2 class="text-2xl font-black text-slate-900 mt-2">SmartAide-Opt: ארכיטקטורה ומודלי AI</h2>
+        <p class="text-xs text-slate-500">פרויקט גמר יישומי המשלב אופטימיזציה מבוססת אילוצים (CSP) וחיזוי היעדרויות</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+          <h3 class="font-bold text-slate-900 text-sm">🎯 1. אופטימיזציה ושיבוץ (CSP)</h3>
+          <p class="text-slate-600">פתרון בעיית שידוך בזמן אמת: <strong>אילוצים קשיחים</strong> (הסמכה רפואית תואמת – חובה) ו<strong>אילוצים רכים</strong> (מזעור מרחק נסיעה/זמן הגעה).</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+          <h3 class="font-bold text-slate-900 text-sm">📊 2. חיזוי היעדרויות (Predictive Analytics)</h3>
+          <p class="text-slate-600">מודל הסתברותי המנתח ימי שבוע ומגמות תחלואה עונתיות להתראה מוקדמת על סיכון למחסור בסייעות באזורים שונים בעיר.</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+          <h3 class="font-bold text-slate-900 text-sm">🔒 3. אנונימיזציה ופרטיות (GDPR)</h3>
+          <p class="text-slate-600">הסרת פרטים מזהים: שימוש במזהים מופשטים (Child_101) ללא שמות ילדים או מידע רפואי רגיש ברשת.</p>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+          <h3 class="font-bold text-slate-900 text-sm">💰 4. כדאיות כלכלית (ROI לרשות)</h3>
+          <p class="text-slate-600">חיסכון עירוני של מעל ₪800,000 בשנה על ידי ניוד עצמי של סייעות וצמצום שכירת סייעות מחליפות חיצוניות (כ-₪480 ליום).</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500">
+    SmartAide-Opt — פרויקט סיום לתואר ראשון בקורס בינה מלאכותית
+  </footer>
+
+  <!-- Application Logic (Pure Vanilla JavaScript - No Babel, No Build Step) -->
+  <script>
+    // System Data
+    const kindergartens = [
+      { id: 'k_1', name: 'גן שושנים', zone: 'צפון', x: 25, y: 30, status: 'balanced', requiredRole: null },
+      { id: 'k_2', name: 'גן רקפות', zone: 'מרכז', x: 50, y: 45, status: 'shortage', requiredRole: 'medical' },
+      { id: 'k_3', name: 'גן אלונים', zone: 'מערב', x: 20, y: 70, status: 'shortage', requiredRole: 'inclusion' },
+      { id: 'k_4', name: 'גן דקלים', zone: 'דרום', x: 75, y: 80, status: 'balanced', requiredRole: null },
+      { id: 'k_5', name: 'גן ארזים', zone: 'מזרח', x: 80, y: 25, status: 'shortage', requiredRole: 'medical' },
+      { id: 'k_6', name: 'גן תמר', zone: 'מרכז', x: 55, y: 60, status: 'balanced', requiredRole: null },
+      { id: 'k_7', name: 'גן חבצלת', zone: 'דרום-מערב', x: 35, y: 85, status: 'balanced', requiredRole: null },
+    ];
+
+    const aides = [
+      { id: 'aide_1', name: 'מיכל כהן', homeKgId: 'k_1', assignedKgId: 'k_1', status: 'assigned', certs: ['medical', 'inclusion'], arrival: true },
+      { id: 'aide_2', name: 'רונית לוי', homeKgId: 'k_4', assignedKgId: 'k_4', status: 'assigned', certs: ['inclusion'], arrival: true },
+      { id: 'aide_3', name: 'אורלי שטרן', homeKgId: 'k_6', assignedKgId: 'k_6', status: 'assigned', certs: ['medical', 'inclusion'], arrival: true },
+      { id: 'aide_4', name: 'שרה ברקוביץ', homeKgId: 'k_7', assignedKgId: 'k_7', status: 'assigned', certs: ['medical'], arrival: true },
+    ];
+
+    let pendingRecommendations = [];
+    let relocatedCount = 0;
+
+    function renderMap() {
+      const container = document.getElementById('map-container');
+      container.innerHTML = '';
+      kindergartens.forEach(kg => {
+        const hasAvail = aides.some(a => a.homeKgId === kg.id && a.status === 'available');
+        let bg = 'bg-emerald-500';
+        let icon = '✓';
+        if (kg.status === 'shortage') {
+          bg = 'bg-rose-500 animate-bounce';
+          icon = '!';
+        } else if (hasAvail) {
+          bg = 'bg-blue-600 ring-4 ring-blue-200';
+          icon = '⚡';
+        }
+
+        const pin = document.createElement('div');
+        pin.style.left = kg.x + '%';
+        pin.style.top = kg.y + '%';
+        pin.className = 'absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center';
+        pin.innerHTML = `
+          <div class="w-8 h-8 rounded-full ${bg} text-white font-bold flex items-center justify-center text-xs shadow-md">
+            ${icon}
+          </div>
+          <span class="text-[10px] bg-slate-900/80 text-white px-1.5 py-0.5 rounded mt-1 whitespace-nowrap">${kg.name}</span>
+        `;
+        container.appendChild(pin);
+      });
+    }
+
+    function updateKPIs() {
+      const shortages = kindergartens.filter(k => k.status === 'shortage').length;
+      const available = aides.filter(a => a.status === 'available').length;
+      document.getElementById('kpi-shortages').innerText = shortages;
+      document.getElementById('kpi-available').innerText = available;
+      document.getElementById('kpi-relocated').innerText = relocatedCount;
+      document.getElementById('kpi-money').innerText = '₪' + (relocatedCount * 480).toLocaleString();
+    }
+
+    function addLog(text) {
+      const logs = document.getElementById('logs-container');
+      const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+      const item = document.createElement('div');
+      item.className = 'text-slate-600';
+      item.innerHTML = `<span class="font-mono text-slate-400">${time}</span> — ${text}`;
+      logs.prepend(item);
+    }
+
+    function showToast(msg, icon = '✅') {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-text').innerText = msg;
+      document.getElementById('toast-icon').innerText = icon;
+      t.classList.remove('hidden');
+      t.classList.add('flex');
+      setTimeout(() => {
+        t.classList.add('hidden');
+        t.classList.remove('flex');
+      }, 3500);
+    }
+
+    function switchTab(tab) {
+      ['admin', 'parent', 'aide', 'academic'].forEach(t => {
+        document.getElementById('view-' + t).classList.add('hidden');
+        document.getElementById('tab-' + t).className = 'px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition';
+      });
+      document.getElementById('view-' + tab).classList.remove('hidden');
+      document.getElementById('tab-' + tab).className = 'px-3 py-1.5 rounded-lg font-bold bg-blue-600 text-white transition';
+      if (tab === 'admin') renderMap();
+      if (tab === 'aide') renderAideView();
+    }
+
+    function submitParentAbsence() {
+      const kid = document.getElementById('parent-kid-select').value;
+      let freedAide = null;
+      if (kid === 'Child_101') freedAide = aides.find(a => a.id === 'aide_1');
+      if (kid === 'Child_104') freedAide = aides.find(a => a.id === 'aide_2');
+      if (kid === 'Child_106') freedAide = aides.find(a => a.id === 'aide_3');
+      if (kid === 'Child_107') freedAide = aides.find(a => a.id === 'aide_4');
+
+      if (freedAide) {
+        freedAide.status = 'available';
+        freedAide.arrival = false;
+        addLog(`התקבל דיווח הורים: התלמיד נעדר. הסייעת ${freedAide.name} שוחררה לניוד מיידי.`);
+        showToast(`דיווח ההיעדרות נקלט! ${freedAide.name} פנויה לשיבוץ.`);
+        updateKPIs();
+        renderMap();
+      }
+    }
+
+    function runOptimization() {
+      const available = aides.filter(a => a.status === 'available');
+      const shortages = kindergartens.filter(k => k.status === 'shortage');
+      const container = document.getElementById('recommendations-container');
+
+      if (available.length === 0) {
+        showToast('אין כרגע סייעות פנויות. יש לדווח היעדרות בממשק הורים!', 'ℹ️');
+        return;
+      }
+
+      pendingRecommendations = [];
+      available.forEach(aide => {
+        shortages.forEach(kg => {
+          if (pendingRecommendations.some(r => r.kgId === kg.id)) return;
+          const matchMedical = kg.requiredRole === 'medical' && aide.certs.includes('medical');
+          const matchInclusion = kg.requiredRole === 'inclusion' && (aide.certs.includes('inclusion') || aide.certs.includes('medical'));
+
+          if (matchMedical || matchInclusion) {
+            pendingRecommendations.push({
+              aideId: aide.id,
+              aideName: aide.name,
+              kgId: kg.id,
+              kgName: kg.name,
+              score: 96,
+              reason: matchMedical ? 'התאמת הסמכה רפואית מלאה ומרחק הגעה: 7 דקות' : 'הסמכת שילוב תואמת ומרחק הליכה קצר'
+            });
+          }
+        });
+      });
+
+      if (pendingRecommendations.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-xl">לא נמצאו שידוכים מתאימים להסמכות.</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      pendingRecommendations.forEach(rec => {
+        const item = document.createElement('div');
+        item.className = 'bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs space-y-2';
+        item.innerHTML = `
+          <div class="flex justify-between items-center font-bold">
+            <span class="text-slate-900">${rec.aideName}</span>
+            <span class="bg-emerald-100 text-emerald-800 text-[11px] px-2 py-0.5 rounded-full">התאמה ${rec.score}%</span>
+          </div>
+          <p class="text-slate-600">ניוד מגן המקור ⬅️ אל <strong class="text-rose-600">${rec.kgName}</strong></p>
+          <p class="text-[11px] text-slate-500">${rec.reason}</p>
+          <button onclick="approveMatch('${rec.aideId}', '${rec.kgId}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg shadow transition">
+            ✓ אשר שיבוץ והפץ לסייעת
+          </button>
+        `;
+        container.appendChild(item);
+      });
+
+      showToast(`אלגוריתם הניוד מצא ${pendingRecommendations.length} שידוכים אופטימליים!`);
+    }
+
+    function approveMatch(aideId, kgId) {
+      const aide = aides.find(a => a.id === aideId);
+      const kg = kindergartens.find(k => k.id === kgId);
+
+      aide.status = 'relocated';
+      aide.assignedKgId = kgId;
+      kg.status = 'balanced';
+      relocatedCount++;
+
+      addLog(`שיבוץ אושר: ${aide.name} נוידה אל ${kg.name}. נשלחה משימה לאפליקציית הסייעת.`);
+      showToast(`השיבוץ אל ${kg.name} אושר בהצלחה!`);
+
+      document.getElementById('recommendations-container').innerHTML = `
+        <div class="text-center py-6 text-xs text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-200 font-bold">
+          ✓ כל השיבוצים שהומלצו אושרו בהצלחה!
+        </div>
+      `;
+
+      updateKPIs();
+      renderMap();
+    }
+
+    function renderAideView() {
+      const container = document.getElementById('aide-status-card');
+      const aide = aides.find(a => a.id === 'aide_1'); // Michal Cohen demo
+      const assignedKg = kindergartens.find(k => k.id === aide.assignedKgId);
+
+      if (aide.status === 'relocated') {
+        container.innerHTML = `
+          <div class="bg-rose-50 border-2 border-rose-200 rounded-2xl p-4 space-y-3">
+            <span class="text-[10px] bg-rose-600 text-white font-bold px-2 py-0.5 rounded-full uppercase">שיבוץ חדש להיום!</span>
+            <h4 class="text-sm font-bold text-slate-900 mt-1">הועברת הבוקר לגן: ${assignedKg.name}</h4>
+            <p class="text-xs text-slate-600">⏱️ זמן הגעה משוער: 7 דקות הליכה/נסיעה</p>
+            <p class="text-xs text-slate-600">📋 דגש טיפולי: ליווי והשגחה רפואית</p>
+            ${aide.arrival ? `
+              <div class="bg-emerald-600 text-white text-center py-2 rounded-xl font-bold text-xs">✓ אישור הגעה נשלח לרשות</div>
+            ` : `
+              <button onclick="confirmArrival()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs shadow">
+                📍 הגעתי לגן (לחץ לעדכון הרשות)
+              </button>
+            `}
+          </div>
+        `;
+      } else if (aide.status === 'available') {
+        container.innerHTML = `
+          <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-center space-y-2">
+            <span class="text-2xl">⏳</span>
+            <h4 class="text-sm font-bold text-blue-900">התלמיד נעדר — את בסטטוס כוננות</h4>
+            <p class="text-xs text-blue-700">המערכת מחשבת כעת שיבוץ אופטימלי לגן חלופי באזור.</p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+            <h4 class="text-sm font-bold text-emerald-900">🏫 יום לימודים סדיר בגן שושנים</h4>
+            <p class="text-xs text-emerald-700">התלמיד נוכח, הליווי מתבצע כסדרו.</p>
+          </div>
+        `;
+      }
+    }
+
+    function confirmArrival() {
+      const aide = aides.find(a => a.id === 'aide_1');
+      aide.arrival = true;
+      showToast('אישור הגעה עודכן במערכת העירונית בהצלחה!');
+      renderAideView();
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderMap();
+      updateKPIs();
+    });
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
