@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>קריית ביאליק - משרד החינוך | מערכת ניוד סייעות</title>
+  <title>קריית ביאליק - משרד החינוך | מערכת ניוד סייעות חכמה</title>
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
   <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Leaflet CSS & JS for Real Kiryat Bialik Street Map -->
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
@@ -42,22 +42,11 @@
       background-color: #f8fafc;
       color: #0f172a;
     }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* Custom Map Marker Pins */
     .custom-div-pin {
       display: flex;
       align-items: center;
@@ -95,75 +84,92 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // רשימת כל המוסדות בקריית ביאליק לפי שכונות עם נתוני דוגמה מלאים
-    const ALL_INSTITUTIONS = [
-      // צור שלום (צפון העיר)
-      { id: 'cs_1', type: 'כיתה', name: 'בית ספר הבונים (ד׳1)', street: 'דפנה 30', neighborhood: 'צור שלום', leadStaff: 'דניאל (רכז)', staffPhone: '053-4444441', aideName: 'רינת', aidePhone: '053-4444442', studentOrTarget: 'תומר', status: 'balanced', absenceDetail: '', lat: 32.8455, lng: 35.0845 },
-      { id: 'cs_2', type: 'כיתה', name: 'חטיבת ביניים דפנה (ז׳3)', street: 'דפנה 52', neighborhood: 'צור שלום', leadStaff: 'שרון (מנהלת)', staffPhone: '050-9876501', aideName: 'ענת', aidePhone: '050-9876502', studentOrTarget: 'יונתן', status: 'balanced', absenceDetail: '', lat: 32.8475, lng: 35.0860 },
-      { id: 'cs_3', type: 'כיתה', name: 'בית ספר נעורים (ג׳2)', street: 'התלונות 14', neighborhood: 'צור שלום', leadStaff: 'יורם (מחנך)', staffPhone: '052-1122331', aideName: 'סמדר', aidePhone: '052-1122332', studentOrTarget: 'כיתה כללי', status: 'balanced', absenceDetail: '', lat: 32.8435, lng: 35.0830 },
-      { id: 'cs_4', type: 'גן', name: 'גן ארזים', street: 'שדרות ירושלים 65', neighborhood: 'צור שלום', leadStaff: 'אילנה (גננת)', staffPhone: '054-2233441', aideName: 'רוחמה', aidePhone: '054-2233442', studentOrTarget: 'גן כללי', status: 'shortage', absenceDetail: 'סייעת חולה (עד 22/09)', lat: 32.8440, lng: 35.0880 },
-      { id: 'cs_5', type: 'גן', name: 'גן חרצית', street: 'התבור 8', neighborhood: 'צור שלום', leadStaff: 'סמדר (גננת)', staffPhone: '054-3344551', aideName: 'אדוה', aidePhone: '054-3344552', studentOrTarget: 'ליאם', status: 'balanced', absenceDetail: '', lat: 32.8465, lng: 35.0825 },
-      { id: 'cs_6', type: 'גן', name: 'גן דולפין', street: 'הגלבוע 12', neighborhood: 'צור שלום', leadStaff: 'טלי (גננת)', staffPhone: '050-4455661', aideName: 'מלי', aidePhone: '050-4455662', studentOrTarget: 'שירה', status: 'balanced', absenceDetail: '', lat: 32.8420, lng: 35.0850 },
-      { id: 'cs_7', type: 'גן', name: 'גן תות', street: 'הכרמל 21', neighborhood: 'צור שלום', leadStaff: 'שירלי (גננת)', staffPhone: '052-5566771', aideName: 'הדס', aidePhone: '052-5566772', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8450, lng: 35.0895 },
+    const LOCAL_STORAGE_KEY = 'kiryat_bialik_aides_db_v2';
+
+    // חישוב מרחק גאוגרפי מדויק בק"מ (Haversine Formula)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return Math.round(R * c * 10) / 10;
+    }
+
+    const INITIAL_INSTITUTIONS = [
+      // צור שלום
+      { id: 'cs_1', type: 'כיתה', name: 'בית ספר הבונים (ד׳1)', street: 'דפנה 30', neighborhood: 'צור שלום', leadStaff: 'דניאל (רכז)', staffPhone: '053-4444441', aideName: 'רינת', aidePhone: '053-4444442', aideCert: 'inclusion', studentOrTarget: 'תומר', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8455, lng: 35.0845 },
+      { id: 'cs_2', type: 'כיתה', name: 'חטיבת ביניים דפנה (ז׳3)', street: 'דפנה 52', neighborhood: 'צור שלום', leadStaff: 'שרון (מנהלת)', staffPhone: '050-9876501', aideName: 'ענת', aidePhone: '050-9876502', aideCert: 'inclusion', studentOrTarget: 'יונתן', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8475, lng: 35.0860 },
+      { id: 'cs_3', type: 'כיתה', name: 'בית ספר נעורים (ג׳2)', street: 'התלונות 14', neighborhood: 'צור שלום', leadStaff: 'יורם (מחנך)', staffPhone: '052-1122331', aideName: 'סמדר', aidePhone: '052-1122332', aideCert: 'medical', studentOrTarget: 'כיתה כללי', requiredCert: 'medical', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8435, lng: 35.0830 },
+      { id: 'cs_4', type: 'גן', name: 'גן ארזים', street: 'שדרות ירושלים 65', neighborhood: 'צור שלום', leadStaff: 'אילנה (גננת)', staffPhone: '054-2233441', aideName: 'רוחמה', aidePhone: '054-2233442', aideCert: 'medical', studentOrTarget: 'גן כללי', requiredCert: 'medical', status: 'shortage', absenceDetail: 'סייעת חולה (עד 22/09)', confirmedArrival: false, lat: 32.8440, lng: 35.0880 },
+      { id: 'cs_5', type: 'גן', name: 'גן חרצית', street: 'התבור 8', neighborhood: 'צור שלום', leadStaff: 'סמדר (גננת)', staffPhone: '054-3344551', aideName: 'אדוה', aidePhone: '054-3344552', aideCert: 'inclusion', studentOrTarget: 'ליאם', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8465, lng: 35.0825 },
+      { id: 'cs_6', type: 'גן', name: 'גן דולפין', street: 'הגלבוע 12', neighborhood: 'צור שלום', leadStaff: 'טלי (גננת)', staffPhone: '050-4455661', aideName: 'מלי', aidePhone: '050-4455662', aideCert: 'inclusion', studentOrTarget: 'שירה', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8420, lng: 35.0850 },
 
       // סביניה ומרכז העיר
-      { id: 'sv_1', type: 'גן', name: 'גן גיטרה', street: 'הנרקיסים 12', neighborhood: 'סביניה', leadStaff: 'מיטל (גננת)', staffPhone: '054-9988771', aideName: 'מורן', aidePhone: '050-1111111', studentOrTarget: 'אלירן', status: 'freed', absenceDetail: 'תלמיד חולה (עד 22/09)', lat: 32.8335, lng: 35.0840 },
-      { id: 'sv_2', type: 'גן', name: 'גן דו רה מי', street: 'הברוש 9', neighborhood: 'סביניה', leadStaff: 'ענת (גננת)', staffPhone: '054-1234987', aideName: 'הילה', aidePhone: '054-3214567', studentOrTarget: 'נועם', status: 'balanced', absenceDetail: '', lat: 32.8320, lng: 35.0855 },
-      { id: 'sv_3', type: 'כיתה', name: 'בית ספר ביאליק (ה׳1)', street: 'קרן היסוד 35', neighborhood: 'סביניה', leadStaff: 'זהבה (רכזת)', staffPhone: '052-8877661', aideName: 'בת אל', aidePhone: '052-8877663', studentOrTarget: 'דניאל', status: 'balanced', absenceDetail: '', lat: 32.8350, lng: 35.0820 },
-      { id: 'sv_4', type: 'כיתה', name: 'בית ספר קדימה (ב׳3)', street: 'החלוצים 16', neighborhood: 'מרכז העיר', leadStaff: 'מוטי (מחנך)', staffPhone: '053-9911221', aideName: 'שני', aidePhone: '053-9911222', studentOrTarget: 'כיתה כללי', status: 'balanced', absenceDetail: '', lat: 32.8310, lng: 35.0815 },
-      { id: 'sv_5', type: 'גן', name: 'גן שושנים', street: 'היקינתון 4', neighborhood: 'סביניה', leadStaff: 'איריס (גננת)', staffPhone: '050-6677881', aideName: 'שיראל', aidePhone: '050-6677882', studentOrTarget: 'אורי', status: 'balanced', absenceDetail: '', lat: 32.8340, lng: 35.0865 },
-      { id: 'sv_6', type: 'גן', name: 'גן תמר', street: 'הרצל 82', neighborhood: 'מרכז העיר', leadStaff: 'יעל (גננת)', staffPhone: '054-7788991', aideName: 'קרן', aidePhone: '054-7788992', studentOrTarget: 'גן כללי', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 21/09)', lat: 32.8295, lng: 35.0830 },
-      { id: 'sv_7', type: 'גן', name: 'גן חצב', street: 'השקמה 10', neighborhood: 'מרכז העיר', leadStaff: 'נורית (גננת)', staffPhone: '052-3322111', aideName: 'אילנית', aidePhone: '052-3322112', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8305, lng: 35.0850 },
+      { id: 'sv_1', type: 'גן', name: 'גן גיטרה', street: 'הנרקיסים 12', neighborhood: 'סביניה', leadStaff: 'מיטל (גננת)', staffPhone: '054-9988771', aideName: 'מורן', aidePhone: '050-1111111', aideCert: 'medical', studentOrTarget: 'אלירן', requiredCert: 'medical', status: 'freed', absenceDetail: 'תלמיד חולה (עד 22/09)', confirmedArrival: false, lat: 32.8335, lng: 35.0840 },
+      { id: 'sv_2', type: 'גן', name: 'גן דו רה מי', street: 'הברוש 9', neighborhood: 'סביניה', leadStaff: 'ענת (גננת)', staffPhone: '054-1234987', aideName: 'הילה', aidePhone: '054-3214567', aideCert: 'inclusion', studentOrTarget: 'נועם', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8320, lng: 35.0855 },
+      { id: 'sv_3', type: 'כיתה', name: 'בית ספר ביאליק (ה׳1)', street: 'קרן היסוד 35', neighborhood: 'סביניה', leadStaff: 'זהבה (רכזת)', staffPhone: '052-8877661', aideName: 'בת אל', aidePhone: '052-8877663', aideCert: 'inclusion', studentOrTarget: 'דניאל', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8350, lng: 35.0820 },
+      { id: 'sv_4', type: 'כיתה', name: 'בית ספר קדימה (ב׳3)', street: 'החלוצים 16', neighborhood: 'מרכז העיר', leadStaff: 'מוטי (מחנך)', staffPhone: '053-9911221', aideName: 'שני', aidePhone: '053-9911222', aideCert: 'medical', studentOrTarget: 'כיתה כללי', requiredCert: 'medical', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8310, lng: 35.0815 },
+      { id: 'sv_5', type: 'גן', name: 'גן תמר', street: 'הרצל 82', neighborhood: 'מרכז העיר', leadStaff: 'יעל (גננת)', staffPhone: '054-7788991', aideName: 'קרן', aidePhone: '054-7788992', aideCert: 'inclusion', studentOrTarget: 'גן כללי', requiredCert: 'inclusion', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 21/09)', confirmedArrival: false, lat: 32.8295, lng: 35.0830 },
 
       // שכונת הפרפר
-      { id: 'pf_1', type: 'כיתה', name: 'בית ספר פסגות (א׳3)', street: 'העצמאות 8', neighborhood: 'שכונת הפרפר', leadStaff: 'רונית (רכזת)', staffPhone: '052-6666661', aideName: 'דנה', aidePhone: '052-6666662', studentOrTarget: 'כיתה כללי', status: 'balanced', absenceDetail: '', lat: 32.8385, lng: 35.0790 },
-      { id: 'pf_2', type: 'גן', name: 'גן דרור', street: 'הפרפר 5', neighborhood: 'שכונת הפרפר', leadStaff: 'רוחמה (גננת)', staffPhone: '050-1122441', aideName: 'מאיה', aidePhone: '050-1122442', studentOrTarget: 'איתי', status: 'balanced', absenceDetail: '', lat: 32.8375, lng: 35.0780 },
-      { id: 'pf_3', type: 'גן', name: 'גן שחף', street: 'היוזמה 3', neighborhood: 'שכונת הפרפר', leadStaff: 'סמירה (גננת)', staffPhone: '054-5566331', aideName: 'נופר', aidePhone: '054-5566332', studentOrTarget: 'גן כללי', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 20/09)', lat: 32.8390, lng: 35.0810 },
-      { id: 'pf_4', type: 'גן', name: 'גן אלונים', street: 'האלה 15', neighborhood: 'שכונת הפרפר', leadStaff: 'מרים (גננת)', staffPhone: '052-9988111', aideName: 'לינוי', aidePhone: '052-9988112', studentOrTarget: 'אמה', status: 'balanced', absenceDetail: '', lat: 32.8368, lng: 35.0805 },
-      { id: 'pf_5', type: 'גן', name: 'גן צבעוני', street: 'האירוס 7', neighborhood: 'שכונת הפרפר', leadStaff: 'כוכי (גננת)', staffPhone: '053-7766551', aideName: 'אפרת', aidePhone: '053-7766552', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8400, lng: 35.0795 },
+      { id: 'pf_1', type: 'כיתה', name: 'בית ספר פסגות (א׳3)', street: 'העצמאות 8', neighborhood: 'שכונת הפרפר', leadStaff: 'רונית (רכזת)', staffPhone: '052-6666661', aideName: 'דנה', aidePhone: '052-6666662', aideCert: 'inclusion', studentOrTarget: 'כיתה כללי', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8385, lng: 35.0790 },
+      { id: 'pf_2', type: 'גן', name: 'גן שחף', street: 'היוזמה 3', neighborhood: 'שכונת הפרפר', leadStaff: 'סמירה (גננת)', staffPhone: '054-5566331', aideName: 'נופר', aidePhone: '054-5566332', aideCert: 'medical', studentOrTarget: 'גן כללי', requiredCert: 'medical', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 20/09)', confirmedArrival: false, lat: 32.8390, lng: 35.0810 },
+      { id: 'pf_3', type: 'גן', name: 'גן אלונים', street: 'האלה 15', neighborhood: 'שכונת הפרפר', leadStaff: 'מרים (גננת)', staffPhone: '052-9988111', aideName: 'לינוי', aidePhone: '052-9988112', aideCert: 'inclusion', studentOrTarget: 'אמה', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8368, lng: 35.0805 },
 
       // ביאליק דרום
-      { id: 'bd_1', type: 'כיתה', name: 'בית ספר מיתרים (ב׳2)', street: 'קרן היסוד 4', neighborhood: 'ביאליק דרום', leadStaff: 'אבי (מחנך)', staffPhone: '052-2222221', aideName: 'יסמין', aidePhone: '052-2222222', studentOrTarget: 'כיתה כללי', status: 'balanced', absenceDetail: '', lat: 32.8250, lng: 35.0835 },
-      { id: 'bd_2', type: 'גן', name: 'גן שקד', street: 'קק״ל 18', neighborhood: 'ביאליק דרום', leadStaff: 'רותי (גננת)', staffPhone: '054-3333331', aideName: 'שירן', aidePhone: '054-3333332', studentOrTarget: 'גן כללי', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 21/09)', lat: 32.8235, lng: 35.0845 },
-      { id: 'bd_3', type: 'גן', name: 'גן אורן', street: 'עולי הגרדום 14', neighborhood: 'ביאליק דרום', leadStaff: 'חנה (גננת)', staffPhone: '050-8899001', aideName: 'תהילה', aidePhone: '050-8899002', studentOrTarget: 'עידו', status: 'freed', absenceDetail: 'תלמיד בחופשה (עד 23/09)', lat: 32.8260, lng: 35.0820 },
-      { id: 'bd_4', type: 'גן', name: 'גן יסמין', street: 'זבוטינסקי 22', neighborhood: 'ביאליק דרום', leadStaff: 'ורד (גננת)', staffPhone: '052-4455881', aideName: 'אוסנת', aidePhone: '052-4455882', studentOrTarget: 'רוני', status: 'balanced', absenceDetail: '', lat: 32.8245, lng: 35.0860 },
-      { id: 'bd_5', type: 'גן', name: 'גן רימון', street: 'ביאליק 50', neighborhood: 'ביאליק דרום', leadStaff: 'טובה (גננת)', staffPhone: '053-1144771', aideName: 'מיכל', aidePhone: '053-1144772', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8220, lng: 35.0830 },
+      { id: 'bd_1', type: 'כיתה', name: 'בית ספר מיתרים (ב׳2)', street: 'קרן היסוד 4', neighborhood: 'ביאליק דרום', leadStaff: 'אבי (מחנך)', staffPhone: '052-2222221', aideName: 'יסמין', aidePhone: '052-2222222', aideCert: 'inclusion', studentOrTarget: 'כיתה כללי', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8250, lng: 35.0835 },
+      { id: 'bd_2', type: 'גן', name: 'גן שקד', street: 'קק״ל 18', neighborhood: 'ביאליק דרום', leadStaff: 'רותי (גננת)', staffPhone: '054-3333331', aideName: 'שירן', aidePhone: '054-3333332', aideCert: 'inclusion', studentOrTarget: 'גן כללי', requiredCert: 'inclusion', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 21/09)', confirmedArrival: false, lat: 32.8235, lng: 35.0845 },
+      { id: 'bd_3', type: 'גן', name: 'גן אורן', street: 'עולי הגרדום 14', neighborhood: 'ביאליק דרום', leadStaff: 'חנה (גננת)', staffPhone: '050-8899001', aideName: 'תהילה', aidePhone: '050-8899002', aideCert: 'inclusion', studentOrTarget: 'עידו', requiredCert: 'inclusion', status: 'freed', absenceDetail: 'תלמיד בחופשה (עד 23/09)', confirmedArrival: false, lat: 32.8260, lng: 35.0820 },
 
       // גבעת הרקפות
-      { id: 'gr_1', type: 'כיתה', name: 'בית ספר רקפות (ג׳1)', street: 'הרקפת 2', neighborhood: 'גבעת הרקפות', leadStaff: 'אילת (מנהלת)', staffPhone: '054-6677991', aideName: 'חגית', aidePhone: '054-6677992', studentOrTarget: 'יואב', status: 'balanced', absenceDetail: '', lat: 32.8280, lng: 35.0965 },
-      { id: 'gr_2', type: 'גן', name: 'גן רקפת', street: 'השקדים 5', neighborhood: 'גבעת הרקפות', leadStaff: 'אורית (גננת)', staffPhone: '050-5555551', aideName: 'ליאת', aidePhone: '050-5555552', studentOrTarget: 'מאיה', status: 'shortage', absenceDetail: 'סייעת חולה (עד 20/09)', lat: 32.8290, lng: 35.0950 },
-      { id: 'gr_3', type: 'גן', name: 'גן סביון', street: 'הכלניות 11', neighborhood: 'גבעת הרקפות', leadStaff: 'ריקי (גננת)', staffPhone: '052-7711221', aideName: 'עופרה', aidePhone: '052-7711222', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8270, lng: 35.0970 },
-      { id: 'gr_4', type: 'גן', name: 'גן כלנית', street: 'האירוסים 8', neighborhood: 'גבעת הרקפות', leadStaff: 'בת שבע (גננת)', staffPhone: '053-8833441', aideName: 'עדי', aidePhone: '053-8833442', studentOrTarget: 'עומר', status: 'freed', absenceDetail: 'תלמיד חולה (עד 21/09)', lat: 32.8300, lng: 35.0980 },
-      { id: 'gr_5', type: 'גן', name: 'גן לילך', street: 'הצבעונים 3', neighborhood: 'גבעת הרקפות', leadStaff: 'גלית (גננת)', staffPhone: '050-9944551', aideName: 'גאולה', aidePhone: '050-9944552', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8265, lng: 35.0945 },
+      { id: 'gr_1', type: 'כיתה', name: 'בית ספר רקפות (ג׳1)', street: 'הרקפת 2', neighborhood: 'גבעת הרקפות', leadStaff: 'אילת (מנהלת)', staffPhone: '054-6677991', aideName: 'חגית', aidePhone: '054-6677992', aideCert: 'inclusion', studentOrTarget: 'יואב', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8280, lng: 35.0965 },
+      { id: 'gr_2', type: 'גן', name: 'גן רקפת', street: 'השקדים 5', neighborhood: 'גבעת הרקפות', leadStaff: 'אורית (גננת)', staffPhone: '050-5555551', aideName: 'ליאת', aidePhone: '050-5555552', aideCert: 'medical', studentOrTarget: 'מאיה', requiredCert: 'medical', status: 'shortage', absenceDetail: 'סייעת חולה (עד 20/09)', confirmedArrival: false, lat: 32.8290, lng: 35.0950 },
+      { id: 'gr_3', type: 'גן', name: 'גן כלנית', street: 'האירוסים 8', neighborhood: 'גבעת הרקפות', leadStaff: 'בת שבע (גננת)', staffPhone: '053-8833441', aideName: 'עדי', aidePhone: '053-8833442', aideCert: 'medical', studentOrTarget: 'עומר', requiredCert: 'medical', status: 'freed', absenceDetail: 'תלמיד חולה (עד 21/09)', confirmedArrival: false, lat: 32.8300, lng: 35.0980 },
 
-      // נאות אפק (השכונה החדשה)
-      { id: 'na_1', type: 'כיתה', name: 'בית ספר מנגינות (א׳1)', street: 'נעמי שמר 10', neighborhood: 'נאות אפק', leadStaff: 'אוסנת (רכזת)', staffPhone: '054-7711881', aideName: 'מוריה', aidePhone: '054-7711882', studentOrTarget: 'כיתה כללי', status: 'balanced', absenceDetail: '', lat: 32.8380, lng: 35.0990 },
-      { id: 'na_2', type: 'כיתה', name: 'מקיף אורט נעמי שמר (י׳2)', street: 'נעמי שמר 24', neighborhood: 'נאות אפק', leadStaff: 'רפי (מנהל)', staffPhone: '052-6622441', aideName: 'רחל', aidePhone: '052-6622442', studentOrTarget: 'אלון', status: 'balanced', absenceDetail: '', lat: 32.8395, lng: 35.1010 },
-      { id: 'na_3', type: 'גן', name: 'גן מיתר', street: 'אהוד מנור 6', neighborhood: 'נאות אפק', leadStaff: 'לימור (גננת)', staffPhone: '050-3366991', aideName: 'צופית', aidePhone: '050-3366992', studentOrTarget: 'גן כללי', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 22/09)', lat: 32.8370, lng: 35.0975 },
-      { id: 'na_4', type: 'גן', name: 'גן עפרוני', street: 'אריק איינשטיין 14', neighborhood: 'נאות אפק', leadStaff: 'שרון (גננת)', staffPhone: '053-2255881', aideName: 'אילנית', aidePhone: '053-2255882', studentOrTarget: 'הדר', status: 'balanced', absenceDetail: '', lat: 32.8388, lng: 35.0960 },
-      { id: 'na_5', type: 'גן', name: 'גן כינור', street: 'עוזי חיטמן 8', neighborhood: 'נאות אפק', leadStaff: 'זהר (גננת)', staffPhone: '054-8844111', aideName: 'חופית', aidePhone: '054-8844112', studentOrTarget: 'לביא', status: 'balanced', absenceDetail: '', lat: 32.8360, lng: 35.1005 },
-      { id: 'na_6', type: 'גן', name: 'גן צליל', street: 'שושנה דמארי 2', neighborhood: 'נאות אפק', leadStaff: 'תמר (גננת)', staffPhone: '052-1177331', aideName: 'רוני', aidePhone: '052-1177332', studentOrTarget: 'גן כללי', status: 'balanced', absenceDetail: '', lat: 32.8405, lng: 35.0985 },
+      // נאות אפק
+      { id: 'na_1', type: 'כיתה', name: 'בית ספר מנגינות (א׳1)', street: 'נעמי שמר 10', neighborhood: 'נאות אפק', leadStaff: 'אוסנת (רכזת)', staffPhone: '054-7711881', aideName: 'מוריה', aidePhone: '054-7711882', aideCert: 'inclusion', studentOrTarget: 'כיתה כללי', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8380, lng: 35.0990 },
+      { id: 'na_2', type: 'גן', name: 'גן מיתר', street: 'אהוד מנור 6', neighborhood: 'נאות אפק', leadStaff: 'לימור (גננת)', staffPhone: '050-3366991', aideName: 'צופית', aidePhone: '050-3366992', aideCert: 'medical', studentOrTarget: 'גן כללי', requiredCert: 'medical', status: 'shortage', absenceDetail: 'סייעת בחופשה (עד 22/09)', confirmedArrival: false, lat: 32.8370, lng: 35.0975 },
+      { id: 'na_3', type: 'גן', name: 'גן כינור', street: 'עוזי חיטמן 8', neighborhood: 'נאות אפק', leadStaff: 'זהר (גננת)', staffPhone: '054-8844111', aideName: 'חופית', aidePhone: '054-8844112', aideCert: 'inclusion', studentOrTarget: 'לביא', requiredCert: 'inclusion', status: 'balanced', absenceDetail: '', confirmedArrival: true, lat: 32.8360, lng: 35.1005 },
     ];
 
     function App() {
-      const [institutions, setInstitutions] = useState(ALL_INSTITUTIONS);
+      // טעינה וסנכרון מ-LocalStorage
+      const [institutions, setInstitutions] = useState(() => {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
+        return INITIAL_INSTITUTIONS;
+      });
+
+      useEffect(() => {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(institutions));
+      }, [institutions]);
+
       const [selectedInstitution, setSelectedInstitution] = useState(null);
       const [filterNeighborhood, setFilterNeighborhood] = useState('all');
       const [filterType, setFilterType] = useState('all');
       const [filterStatus, setFilterStatus] = useState('all');
       const [searchQuery, setSearchQuery] = useState('');
 
-      // Modals
+      // מודלים
       const [modalType, setModalType] = useState(null); // 'student' | 'aide' | 'relocate' | null
       const [activeAideToRelocate, setActiveAideToRelocate] = useState(null);
 
-      // Form States
-      const [reportedInstId, setReportedInstId] = useState(ALL_INSTITUTIONS[0].id);
+      // שדות טופס דיווח הורים
+      const [reportedInstId, setReportedInstId] = useState(INITIAL_INSTITUTIONS[0].id);
       const [absenceReason, setAbsenceReason] = useState('מחלה');
       const [absenceUntil, setAbsenceUntil] = useState('22/09');
+      const [idLast4, setIdLast4] = useState('');
+      const [authError, setAuthError] = useState('');
+
       const [notificationToast, setNotificationToast] = useState(null);
 
-      // Leaflet Map Refs
+      // מפת Leaflet
       const mapContainerRef = useRef(null);
       const mapInstanceRef = useRef(null);
       const markersLayerRef = useRef(null);
@@ -173,10 +179,18 @@
         setTimeout(() => setNotificationToast(null), 4000);
       };
 
-      // Initialize Real Leaflet Map
+      // איפוס נתוני הדגמה
+      const handleResetData = () => {
+        if (confirm('האם לאפס את כל הנתונים לברירת המחדל של קריית ביאליק?')) {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+          setInstitutions(INITIAL_INSTITUTIONS);
+          showToast('הנתונים אופסו בהצלחה לברירת המחדל');
+        }
+      };
+
+      // אתחול המפה
       useEffect(() => {
         if (!mapInstanceRef.current && mapContainerRef.current) {
-          // Kiryat Bialik Center Coordinates
           const map = L.map(mapContainerRef.current, {
             zoomControl: true,
             scrollWheelZoom: true
@@ -199,14 +213,12 @@
         };
       }, []);
 
-      // Render Pins on Map whenever institutions or filters change
+      // ציור המרקרים במפה
       useEffect(() => {
         if (!mapInstanceRef.current || !markersLayerRef.current) return;
-
         markersLayerRef.current.clearLayers();
 
         institutions.forEach(inst => {
-          // Check if matches filters
           const matchNeighborhood = filterNeighborhood === 'all' || inst.neighborhood === filterNeighborhood;
           const matchType = filterType === 'all' || inst.type === filterType;
           const matchStatus = filterStatus === 'all' || inst.status === filterStatus;
@@ -256,7 +268,7 @@
         });
       }, [institutions, filterNeighborhood, filterType, filterStatus, searchQuery]);
 
-      // Focus map on item click from table
+      // מיקוד מהטבלה למפה
       const focusOnInstitution = (inst) => {
         setSelectedInstitution(inst);
         if (mapInstanceRef.current) {
@@ -264,25 +276,34 @@
         }
       };
 
-      // Handling Student Absence (Frees Aide)
+      // דיווח היעדרות הורים (כולל אימות 4 ספרות)
       const handleStudentReportSubmit = (e) => {
         e.preventDefault();
+        if (idLast4.length !== 4 || isNaN(idLast4)) {
+          setAuthError('נא להזין בדיוק 4 ספרות אחרונות של ת"ז הילד לאימות');
+          return;
+        }
+        setAuthError('');
+
         setInstitutions(prev => prev.map(inst => {
           if (inst.id === reportedInstId) {
             return {
               ...inst,
               status: 'freed',
-              absenceDetail: `תלמיד נעדר (${absenceReason}) עד ${absenceUntil}`
+              absenceDetail: `תלמיד נעדר (${absenceReason}) עד ${absenceUntil}`,
+              confirmedArrival: false
             };
           }
           return inst;
         }));
+
         const target = institutions.find(i => i.id === reportedInstId);
-        showToast(`דיווח היעדרות נקלט: התלמיד מ${target?.name} נעדר. הסייעת ${target?.aideName} פנויה לניוד!`);
+        showToast(`היעדרות אומתה! הסייעת ${target?.aideName} שוחררה לניוד מיידי.`);
+        setIdLast4('');
         setModalType(null);
       };
 
-      // Handling Aide Absence (Creates Shortage)
+      // דיווח היעדרות סייעת
       const handleAideReportSubmit = (e) => {
         e.preventDefault();
         setInstitutions(prev => prev.map(inst => {
@@ -290,24 +311,26 @@
             return {
               ...inst,
               status: 'shortage',
-              absenceDetail: `סייעת נעדרת (${absenceReason}) עד ${absenceUntil}`
+              absenceDetail: `סייעת נעדרת (${absenceReason}) עד ${absenceUntil}`,
+              confirmedArrival: false
             };
           }
           return inst;
         }));
         const target = institutions.find(i => i.id === reportedInstId);
-        showToast(`חוסר עודכן: הסייעת ב${target?.name} נעדרת עד ${absenceUntil}.`);
+        showToast(`חוסר עודכן ב${target?.name} - סייעת חסרה.`);
         setModalType(null);
       };
 
-      // Handle Direct Relocation
+      // שיבוץ סייעת לגן חסר והפקת הודעות WhatsApp
       const handleDirectRelocation = (sourceInst, targetInst) => {
         setInstitutions(prev => prev.map(item => {
           if (item.id === targetInst.id) {
             return {
               ...item,
               status: 'balanced',
-              absenceDetail: `מולא ע"י הסייעת ${sourceInst.aideName} מ${sourceInst.name}`
+              absenceDetail: `מולא ע"י הסייעת ${sourceInst.aideName} מ${sourceInst.name}`,
+              confirmedArrival: false
             };
           }
           if (item.id === sourceInst.id) {
@@ -319,15 +342,87 @@
           return item;
         }));
 
-        const message = `בוקר טוב ${sourceInst.aideName}, תלמידך ב${sourceInst.name} נעדר היום. שובצת לתגבור ב${targetInst.type} "${targetInst.name}" ברחוב ${targetInst.street} (${targetInst.neighborhood}). איש קשר: ${targetInst.leadStaff}, טלפון: ${targetInst.staffPhone}. יום מוצלח!`;
-        const waUrl = `https://wa.me/972${sourceInst.aidePhone.replace(/[^0-9]/g, '').slice(1)}?text=${encodeURIComponent(message)}`;
-        
-        window.open(waUrl, '_blank');
-        showToast(`הסייעת ${sourceInst.aideName} שובצה בהצלחה ל${targetInst.name}! הודעה מוכנה בוואטסאפ.`);
+        // הודעה 1: לסייעת
+        const aideMsg = `בוקר טוב ${sourceInst.aideName}, התלמיד ב${sourceInst.name} נעדר היום. שובצת לתגבור ב${targetInst.type} "${targetInst.name}" ברחוב ${targetInst.street} (${targetInst.neighborhood}). איש קשר: ${targetInst.leadStaff}, טלפון: ${targetInst.staffPhone}. יום מוצלח!`;
+        const aideWaUrl = `https://wa.me/972${sourceInst.aidePhone.replace(/[^0-9]/g, '').slice(1)}?text=${encodeURIComponent(aideMsg)}`;
+
+        // הודעה 2: לגננת המקבלת
+        const staffMsg = `בוקר טוב ${targetInst.leadStaff}, נסגר החוסר להיום ב${targetInst.name}! הסייעת ${sourceInst.aideName} מגיעה אליכם לסיוע (טלפון: ${sourceInst.aidePhone}). יום שקט ומוצלח!`;
+        const staffWaUrl = `https://wa.me/972${targetInst.staffPhone.replace(/[^0-9]/g, '').slice(1)}?text=${encodeURIComponent(staffMsg)}`;
+
+        window.open(aideWaUrl, '_blank');
+        setTimeout(() => window.open(staffWaUrl, '_blank'), 1000);
+
+        showToast(`השיבוץ בוצע! נפתחו הודעות WhatsApp לסייעת ולגננת.`);
         setModalType(null);
       };
 
-      // Filtered Institutions List
+      // אישור הגעה של הסייעת
+      const handleCheckIn = (instId) => {
+        setInstitutions(prev => prev.map(inst => {
+          if (inst.id === instId) {
+            return { ...inst, confirmedArrival: true };
+          }
+          return inst;
+        }));
+        showToast('אישור הגעה עודכן במערכת העירונית בהצלחה!');
+      };
+
+      // ייצוא דוח יומי לאקסל (CSV)
+      const exportDailyReportCSV = () => {
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "סוג,שם מוסד,שכונה,כתובת,צוות מוביל,טלפון צוות,סייעת,טלפון סייעת,הסמכת סייעת,תלמיד/ייעוד,סטטוס,אישור הגעה,הערות היעדרות\n";
+
+        institutions.forEach(i => {
+          const row = [
+            i.type,
+            i.name,
+            i.neighborhood,
+            i.street,
+            i.leadStaff,
+            i.staffPhone,
+            i.aideName,
+            i.aidePhone,
+            i.aideCert === 'medical' ? 'רפואית' : 'שילוב',
+            i.studentOrTarget,
+            i.status === 'shortage' ? 'חוסר' : i.status === 'freed' ? 'פנויה לניוד' : 'מאוזן',
+            i.confirmedArrival ? 'הגיעה' : 'טרם אישרה',
+            `"${i.absenceDetail || ''}"`
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `דוח_ניוד_קריית_ביאליק_${new Date().toLocaleDateString('he-IL').replace(/\./g, '_')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('דוח אקסל יומי הופק והורד בהצלחה!');
+      };
+
+      // רשימת גנים חסרים ממוינים לפי מרחק והתאמה
+      const smartShortageMatches = useMemo(() => {
+        if (!activeAideToRelocate) return [];
+        
+        const shortages = institutions.filter(i => i.status === 'shortage');
+        return shortages.map(target => {
+          const dist = calculateDistance(activeAideToRelocate.lat, activeAideToRelocate.lng, target.lat, target.lng);
+          const certMatch = activeAideToRelocate.aideCert === target.requiredCert || activeAideToRelocate.aideCert === 'medical'; // סייעת רפואית יכולה לשמש גם שילוב
+          return {
+            ...target,
+            distanceKm: dist,
+            certMatch
+          };
+        }).sort((a, b) => {
+          if (a.certMatch && !b.certMatch) return -1;
+          if (!a.certMatch && b.certMatch) return 1;
+          return a.distanceKm - b.distanceKm; // הקרוב ביותר ראשון
+        });
+      }, [institutions, activeAideToRelocate]);
+
+      // סינון הרשימה בטבלה
       const filteredList = useMemo(() => {
         return institutions.filter(inst => {
           const matchNeighborhood = filterNeighborhood === 'all' || inst.neighborhood === filterNeighborhood;
@@ -361,19 +456,19 @@
                   <div className="flex items-center gap-2">
                     <h1 className="text-lg font-black tracking-tight text-white">קריית ביאליק — משרד החינוך</h1>
                     <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-md border border-blue-400/30 font-medium">
-                      כלל מוסדות החינוך בעיר ({institutions.length})
+                      מערכת ניוד ואופטימיזציה עירונית
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">ניהול נוכחות וניוד סייעות בזמן אמת ע״ג מפת רחובות עירונית</p>
+                  <p className="text-xs text-slate-400">שיבוץ מבוסס מרחק והסמכות • סנכרון רציף ללא צורך בסיסמאות</p>
                 </div>
               </div>
 
-              {/* Badges & Report Buttons */}
+              {/* Action Buttons & Badges */}
               <div className="flex items-center flex-wrap gap-2">
                 <div className="flex items-center bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 text-xs gap-3 text-slate-200">
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> מאוזן: <strong>{balancedCount}</strong></span>
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> חוסר: <strong className="text-rose-400">{shortageCount}</strong></span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> פנויות לניוד: <strong className="text-blue-400">{freedCount}</strong></span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> פנויות: <strong className="text-blue-400">{freedCount}</strong></span>
                 </div>
 
                 <button
@@ -381,7 +476,7 @@
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition flex items-center gap-1.5"
                 >
                   <span>👶</span>
-                  <span>דיווח הורים (תלמיד נעדר)</span>
+                  <span>דיווח הורים (תלמיד)</span>
                 </button>
 
                 <button
@@ -389,7 +484,24 @@
                   className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition flex items-center gap-1.5"
                 >
                   <span>👩‍🏫</span>
-                  <span>דיווח צוות (סייעת נעדרת)</span>
+                  <span>דיווח צוות (סייעת)</span>
+                </button>
+
+                <button
+                  onClick={exportDailyReportCSV}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 shadow transition flex items-center gap-1"
+                  title="הורד דוח אקסל יומי מסכם"
+                >
+                  <span>📊</span>
+                  <span>דוח אקסל</span>
+                </button>
+
+                <button
+                  onClick={handleResetData}
+                  className="text-slate-400 hover:text-rose-400 text-xs p-2 transition"
+                  title="איפוס נתונים לברירת מחדל"
+                >
+                  🔄
                 </button>
               </div>
             </div>
@@ -403,20 +515,19 @@
             </div>
           )}
 
-          {/* Main Layout (Split View 50% / 50%) */}
+          {/* Split 50% / 50% */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
             {/* RIGHT PANEL (50%): Real OpenStreetMap */}
             <div className="w-full md:w-1/2 h-1/2 md:h-full bg-white border-l border-slate-200 flex flex-col relative overflow-hidden">
               
-              {/* Map Subheader */}
               <div className="p-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                     <span>🗺️</span>
-                    <span>מפת קריית ביאליק המלאה</span>
+                    <span>מפת פריסת מוסדות — קריית ביאליק</span>
                   </h2>
-                  <p className="text-[11px] text-slate-500">כלל הגנים ובתי הספר מסומנים לפי מיקומם האמיתי</p>
+                  <p className="text-[11px] text-slate-500">לחץ על מוסד לצפייה בפרטים, שיבוץ ואישור הגעה</p>
                 </div>
 
                 <div className="flex items-center gap-3 text-[11px] bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
@@ -426,10 +537,10 @@
                 </div>
               </div>
 
-              {/* Real Leaflet Map Container */}
+              {/* Map Container */}
               <div ref={mapContainerRef} className="flex-1 w-full h-full relative z-0"></div>
 
-              {/* Floating Detailed Card on Pin Select */}
+              {/* Floating Card */}
               {selectedInstitution && (
                 <div className="absolute bottom-4 inset-x-4 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-slate-200 text-xs z-20 animate-fadeIn">
                   <div className="flex items-start justify-between">
@@ -437,6 +548,9 @@
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{selectedInstitution.type} {selectedInstitution.name}</span>
                         <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">{selectedInstitution.neighborhood}</span>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">
+                          הסמכה: {selectedInstitution.aideCert === 'medical' ? 'רפואית' : 'שילוב'}
+                        </span>
                       </div>
                       <p className="text-slate-500 mt-0.5">📍 {selectedInstitution.street}</p>
                       <p className="text-slate-700 mt-1">
@@ -460,20 +574,35 @@
                     </button>
                   </div>
 
-                  {selectedInstitution.status === 'freed' && (
-                    <div className="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between">
-                      <span className="text-blue-700 font-bold">הסייעת פנויה! נדרש שיבוץ לגן חסר:</span>
+                  <div className="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between">
+                    {selectedInstitution.status === 'freed' ? (
                       <button
                         onClick={() => {
                           setActiveAideToRelocate(selectedInstitution);
                           setModalType('relocate');
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-xl shadow"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-xl shadow text-xs flex items-center gap-1.5"
                       >
-                        נייד את {selectedInstitution.aideName} 🚀
+                        <span>נייד לפי מרחק חכם ⚡</span>
                       </button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {selectedInstitution.confirmedArrival ? (
+                          <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                            <span>✅</span>
+                            <span>הסייעת אישרה הגעה</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleCheckIn(selectedInstitution.id)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs"
+                          >
+                            📍 סמן: הסייעת הגיעה
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -481,14 +610,14 @@
             {/* LEFT PANEL (50%): Institutions Table */}
             <div className="w-full md:w-1/2 h-1/2 md:h-full bg-slate-50 flex flex-col overflow-hidden">
               
-              {/* Filters Toolbar */}
+              {/* Filter Toolbar */}
               <div className="p-3 bg-white border-b border-slate-200 flex flex-col gap-2">
                 <div className="relative w-full">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="חיפוש מהיר: גן, כיתה, סייעת, תלמיד, רחוב..."
+                    placeholder="חיפוש: גן, כיתה, סייעת, תלמיד, רחוב..."
                     className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 pr-8 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <span className="absolute right-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
@@ -533,17 +662,16 @@
                 </div>
               </div>
 
-              {/* Table Body */}
+              {/* Table */}
               <div className="flex-1 overflow-auto">
                 <table className="w-full text-right border-collapse text-xs">
                   <thead className="bg-slate-100 text-slate-600 font-bold sticky top-0 border-b border-slate-200 z-10">
                     <tr>
                       <th className="p-3">מוסד ושכונה</th>
                       <th className="p-3">כתובת</th>
-                      <th className="p-3">גננת / רכז</th>
-                      <th className="p-3">סייעת וטלפון</th>
+                      <th className="p-3">סייעת והסמכה</th>
                       <th className="p-3">תלמיד / ייעוד</th>
-                      <th className="p-3">סטטוס</th>
+                      <th className="p-3">סטטוס ונוכחות</th>
                       <th className="p-3 text-center">פעולה</th>
                     </tr>
                   </thead>
@@ -574,20 +702,21 @@
                           </td>
 
                           <td className="p-3 text-slate-700">
-                            <div>{inst.leadStaff}</div>
-                            <a href={`tel:${inst.staffPhone}`} className="text-[10px] text-blue-600 hover:underline">{inst.staffPhone}</a>
-                          </td>
-
-                          <td className="p-3 text-slate-700">
                             <div className="font-bold">{inst.aideName}</div>
-                            <a 
-                              href={`https://wa.me/972${inst.aidePhone.replace(/[^0-9]/g, '').slice(1)}`}
-                              target="_blank"
-                              className="text-[10px] text-emerald-600 hover:underline flex items-center gap-1"
-                            >
-                              <span>📱</span>
-                              <span>{inst.aidePhone}</span>
-                            </a>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                                inst.aideCert === 'medical' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {inst.aideCert === 'medical' ? 'רפואית 🩺' : 'שילוב 🤝'}
+                              </span>
+                              <a 
+                                href={`https://wa.me/972${inst.aidePhone.replace(/[^0-9]/g, '').slice(1)}`}
+                                target="_blank"
+                                className="text-[10px] text-emerald-600 hover:underline"
+                              >
+                                {inst.aidePhone}
+                              </a>
+                            </div>
                           </td>
 
                           <td className="p-3">
@@ -599,22 +728,24 @@
                           <td className="p-3">
                             {isShortage && (
                               <div className="text-rose-600 font-bold leading-tight">
-                                <div>🔴 חוסר (דרושה סייעת)</div>
+                                <div>🔴 חוסר בסייעת</div>
                                 <div className="text-[10px] text-rose-500 font-normal">{inst.absenceDetail}</div>
                               </div>
                             )}
 
                             {isFreed && (
                               <div className="text-blue-700 font-bold leading-tight">
-                                <div>🔵 סייעת התפנתה לניוד!</div>
+                                <div>🔵 פנויה לניוד מיידי</div>
                                 <div className="text-[10px] text-blue-600 font-normal">{inst.absenceDetail}</div>
                               </div>
                             )}
 
                             {inst.status === 'balanced' && (
-                              <div className="text-emerald-700 font-bold flex items-center gap-1">
-                                <span>🟢</span>
-                                <span>מאוזן ומאויש</span>
+                              <div className="text-emerald-700 font-bold leading-tight">
+                                <div>🟢 מאוזן ומאויש</div>
+                                <div className="text-[10px] font-normal text-slate-500">
+                                  {inst.confirmedArrival ? 'הגעה אושרה ✓' : 'טרם נדרש אישור'}
+                                </div>
                               </div>
                             )}
                           </td>
@@ -628,7 +759,7 @@
                                 }}
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg shadow whitespace-nowrap transition"
                               >
-                                נייד סייעת 🚀
+                                נייד 🚀
                               </button>
                             ) : (
                               <button
@@ -648,21 +779,21 @@
             </div>
           </div>
 
-          {/* MODAL 1: Student Absence (Parent Report) */}
+          {/* MODAL 1: Student Absence (Parent Report with 4-Digit Verification) */}
           {modalType === 'student' && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
                 <div className="flex items-center justify-between border-b pb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">👶</span>
-                    <h3 className="font-bold text-base text-slate-900">דיווח הורים: היעדרות תלמיד/ה</h3>
+                    <h3 className="font-bold text-base text-slate-900">דיווח הורים מהיר (אימות בלחיצה)</h3>
                   </div>
                   <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                 </div>
 
                 <form onSubmit={handleStudentReportSubmit} className="space-y-3.5 text-xs">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">בחר/י מוסד ותלמיד:</label>
+                    <label className="font-bold text-slate-700 block mb-1">בחר/י מוסד ותלמיד/ה:</label>
                     <select
                       value={reportedInstId}
                       onChange={(e) => setReportedInstId(e.target.value)}
@@ -705,22 +836,34 @@
                     />
                   </div>
 
-                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-blue-900 text-[11px] leading-relaxed">
-                    💡 <strong>ללא צורך בסיסמה:</strong> עם שליחת הדיווח, הסייעת תשוחרר אוטומטית לניוד עירוני והמרקר במפה יהפוך לכחול.
+                  {/* אימות מהיר ללא סיסמה */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label className="font-bold text-slate-800 block mb-1">
+                      🔒 אימות הורה (4 ספרות אחרונות של ת"ז הילד/ה):
+                    </label>
+                    <input
+                      type="password"
+                      maxLength="4"
+                      value={idLast4}
+                      onChange={(e) => setIdLast4(e.target.value)}
+                      placeholder="••••"
+                      className="w-full border border-slate-300 rounded-xl p-2.5 bg-white text-center font-bold tracking-widest text-base"
+                    />
+                    {authError && <p className="text-rose-600 font-bold text-[11px] mt-1">{authError}</p>}
                   </div>
 
                   <button
                     type="submit"
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition"
                   >
-                    אשר דיווח ושחרר סייעת
+                    אמת דיווח ושחרר סייעת לניוד עירוני
                   </button>
                 </form>
               </div>
             </div>
           )}
 
-          {/* MODAL 2: Aide Absence (Staff Report) */}
+          {/* MODAL 2: Aide Absence Report */}
           {modalType === 'aide' && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
@@ -781,54 +924,73 @@
                     type="submit"
                     className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl shadow-lg transition"
                   >
-                    עדכן חוסר במוסד (מרקר אדום)
+                    עדכן חוסר במוסד (סמן באדום)
                   </button>
                 </form>
               </div>
             </div>
           )}
 
-          {/* MODAL 3: Relocation Dispatcher with Instant WhatsApp Alert */}
+          {/* MODAL 3: Smart Match Relocation Dialog (Sorted by Distance & Certification) */}
           {modalType === 'relocate' && activeAideToRelocate && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
                 <div className="flex items-center justify-between border-b pb-3">
                   <div>
-                    <h3 className="font-bold text-base text-slate-900">
-                      שיבוץ וניוד מהיר: {activeAideToRelocate.aideName}
+                    <h3 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
+                      <span>שיבוץ חכם לסייעת:</span>
+                      <span className="text-blue-600">{activeAideToRelocate.aideName}</span>
                     </h3>
                     <p className="text-xs text-slate-500">
-                      מוסד מקור: {activeAideToRelocate.name} ({activeAideToRelocate.neighborhood})
+                      מוסד מקור: {activeAideToRelocate.name} ({activeAideToRelocate.neighborhood}) • הסמכה: <strong>{activeAideToRelocate.aideCert === 'medical' ? 'רפואית' : 'שילוב'}</strong>
                     </p>
                   </div>
                   <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                 </div>
 
-                <div className="space-y-2 text-xs max-h-96 overflow-y-auto pr-1">
-                  <span className="font-bold text-slate-700 block">בחר/י לאיזה מוסד בחוסר לשבץ אותה:</span>
+                <div className="space-y-2.5 text-xs max-h-96 overflow-y-auto pr-1">
+                  <span className="font-bold text-slate-700 block">
+                    מוסדות חסרים ממוינים לפי מרחק גאוגרפי והתאמת הסמכה:
+                  </span>
                   
-                  {institutions.filter(i => i.status === 'shortage').length === 0 ? (
+                  {smartShortageMatches.length === 0 ? (
                     <div className="p-4 bg-emerald-50 text-emerald-800 rounded-2xl text-center font-bold">
-                      🎉 כל הגנים ובתי הספר בקריית ביאליק מאוישים במלואם!
+                      🎉 כל הגנים ובתי הספר בקריית ביאליק מאוישים כעת במלואם!
                     </div>
                   ) : (
-                    institutions.filter(i => i.status === 'shortage').map(shortageInst => (
+                    smartShortageMatches.map(matchInst => (
                       <div
-                        key={shortageInst.id}
-                        className="bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-2xl p-3 flex items-center justify-between transition"
+                        key={matchInst.id}
+                        className={`border rounded-2xl p-3 flex items-center justify-between transition ${
+                          matchInst.certMatch ? 'bg-white border-slate-200 hover:border-blue-400' : 'bg-amber-50/50 border-amber-200'
+                        }`}
                       >
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm">{shortageInst.type} {shortageInst.name}</h4>
-                          <p className="text-slate-500">{shortageInst.street} ({shortageInst.neighborhood})</p>
-                          <p className="text-rose-600 font-medium text-[11px] mt-0.5">{shortageInst.absenceDetail}</p>
-                          <p className="text-slate-600 text-[11px]">איש קשר: {shortageInst.leadStaff} ({shortageInst.staffPhone})</p>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 text-sm">{matchInst.type} {matchInst.name}</h4>
+                            <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-bold">
+                              {matchInst.distanceKm} ק"מ
+                            </span>
+                            {matchInst.certMatch ? (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                                התאמת הסמכה מלאה ✓
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-rose-100 text-rose-800 px-1.5 py-0.2 rounded font-bold">
+                                דורש הסמכה רפואית! ⚠️
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-slate-500">{matchInst.street} ({matchInst.neighborhood})</p>
+                          <p className="text-rose-600 font-medium text-[11px]">{matchInst.absenceDetail}</p>
+                          <p className="text-slate-600 text-[11px]">איש קשר: {matchInst.leadStaff} ({matchInst.staffPhone})</p>
                         </div>
 
                         <button
-                          onClick={() => handleDirectRelocation(activeAideToRelocate, shortageInst)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-xl shadow transition text-xs flex items-center gap-1.5"
+                          onClick={() => handleDirectRelocation(activeAideToRelocate, matchInst)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-xl shadow transition text-xs flex items-center gap-1.5 whitespace-nowrap"
                         >
-                          <span>שבץ ופתח WhatsApp</span>
+                          <span>שבץ ושלח WhatsApp</span>
                           <span>🚀</span>
                         </button>
                       </div>
