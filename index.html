@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>קריית ביאליק - משרד החינוך | מערכת ניוד סייעות</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Google Fonts: Rubik & Assistant -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Rubik', 'Assistant', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Rubik', 'Assistant', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .pulse-alert {
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      50% { transform: scale(1.18); opacity: 0.35; }
+      100% { transform: scale(0.95); opacity: 0.9; }
+    }
+  </style>
+</head>
+<body class="antialiased h-screen flex flex-col overflow-hidden">
+  <div id="root" class="h-full flex flex-col"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    const INITIAL_INSTITUTIONS = [
+      {
+        id: 'inst_1',
+        type: 'גן',
+        name: 'גיטרה',
+        street: 'הנרקיסים 12',
+        neighborhood: 'סביניה',
+        leadStaff: 'מיטל (גננת)',
+        staffPhone: '054-9988771',
+        aideName: 'מורן',
+        aidePhone: '050-1111111',
+        studentOrTarget: 'אלירן',
+        status: 'freed', // freed, shortage, balanced
+        absenceDetail: 'תלמיד חולה (עד 22/09)',
+        x: 52,
+        y: 44
+      },
+      {
+        id: 'inst_2',
+        type: 'כיתה',
+        name: 'בית ספר מיתרים (ב׳2)',
+        street: 'קרן היסוד 4',
+        neighborhood: 'ביאליק דרום',
+        leadStaff: 'אבי (מחנך)',
+        staffPhone: '052-8877662',
+        aideName: 'יסמין',
+        aidePhone: '052-2222222',
+        studentOrTarget: 'כיתה כללי',
+        status: 'balanced',
+        absenceDetail: '',
+        x: 42,
+        y: 68
+      },
+      {
+        id: 'inst_3',
+        type: 'גן',
+        name: 'שקד',
+        street: 'קק״ל 18',
+        neighborhood: 'ביאליק דרום',
+        leadStaff: 'רותי (גננת)',
+        staffPhone: '054-3333333',
+        aideName: 'שירן',
+        aidePhone: '054-7766554',
+        studentOrTarget: 'גן כללי',
+        status: 'shortage',
+        absenceDetail: 'סייעת בחופשה (עד 21/09)',
+        x: 35,
+        y: 62
+      },
+      {
+        id: 'inst_4',
+        type: 'כיתה',
+        name: 'בית ספר הבונים (ד׳1)',
+        street: 'דפנה 30',
+        neighborhood: 'צור שלום',
+        leadStaff: 'דניאל (רכז)',
+        staffPhone: '053-4444444',
+        aideName: 'רינת',
+        aidePhone: '053-5566778',
+        studentOrTarget: 'תומר',
+        status: 'balanced',
+        absenceDetail: '',
+        x: 65,
+        y: 24
+      },
+      {
+        id: 'inst_5',
+        type: 'גן',
+        name: 'רקפת',
+        street: 'השקדים 5',
+        neighborhood: 'גבעת הרקפות',
+        leadStaff: 'אורית (גננת)',
+        staffPhone: '050-5555555',
+        aideName: 'ליאת',
+        aidePhone: '050-6677889',
+        studentOrTarget: 'מאיה',
+        status: 'shortage',
+        absenceDetail: 'סייעת חולה (עד 20/09)',
+        x: 80,
+        y: 52
+      },
+      {
+        id: 'inst_6',
+        type: 'כיתה',
+        name: 'בית ספר פסגות (א׳3)',
+        street: 'העצמאות 8',
+        neighborhood: 'שכונת הפרפר',
+        leadStaff: 'רונית (רכזת)',
+        staffPhone: '052-6666666',
+        aideName: 'דנה',
+        aidePhone: '052-7788990',
+        studentOrTarget: 'כיתה כללי',
+        status: 'balanced',
+        absenceDetail: '',
+        x: 48,
+        y: 33
+      },
+      {
+        id: 'inst_7',
+        type: 'גן',
+        name: 'דו רה מי',
+        street: 'הברוש 9',
+        neighborhood: 'סביניה',
+        leadStaff: 'ענת (גננת)',
+        staffPhone: '054-1234987',
+        aideName: 'הילה',
+        aidePhone: '054-3214567',
+        studentOrTarget: 'נועם',
+        status: 'balanced',
+        absenceDetail: '',
+        x: 58,
+        y: 48
+      }
+    ];
+
+    function App() {
+      const [institutions, setInstitutions] = useState(INITIAL_INSTITUTIONS);
+      const [selectedInstitution, setSelectedInstitution] = useState(null);
+      const [filterType, setFilterType] = useState('all'); // all | גן | כיתה
+      const [filterStatus, setFilterStatus] = useState('all'); // all | shortage | freed | balanced
+      const [searchQuery, setSearchQuery] = useState('');
+
+      // Reporting Modals
+      const [modalType, setModalType] = useState(null); // 'student' | 'aide' | 'relocate' | null
+      const [activeAideToRelocate, setActiveAideToRelocate] = useState(null);
+
+      // Form States
+      const [reportedInstId, setReportedInstId] = useState(INITIAL_INSTITUTIONS[0].id);
+      const [absenceReason, setAbsenceReason] = useState('מחלה');
+      const [absenceUntil, setAbsenceUntil] = useState('22/09');
+      const [notificationToast, setNotificationToast] = useState(null);
+
+      const showToast = (msg) => {
+        setNotificationToast(msg);
+        setTimeout(() => setNotificationToast(null), 4000);
+      };
+
+      // Handling Student Absence (Frees Aide)
+      const handleStudentReportSubmit = (e) => {
+        e.preventDefault();
+        setInstitutions(prev => prev.map(inst => {
+          if (inst.id === reportedInstId) {
+            return {
+              ...inst,
+              status: 'freed',
+              absenceDetail: `תלמיד נעדר (${absenceReason}) עד ${absenceUntil}`
+            };
+          }
+          return inst;
+        }));
+        const target = institutions.find(i => i.id === reportedInstId);
+        showToast(`היעדרות התלמיד ${target?.studentOrTarget} נקלטה. הסייעת ${target?.aideName} שוחררה לניוד!`);
+        setModalType(null);
+      };
+
+      // Handling Aide Absence (Creates Shortage)
+      const handleAideReportSubmit = (e) => {
+        e.preventDefault();
+        setInstitutions(prev => prev.map(inst => {
+          if (inst.id === reportedInstId) {
+            return {
+              ...inst,
+              status: 'shortage',
+              absenceDetail: `סייעת נעדרת (${absenceReason}) עד ${absenceUntil}`
+            };
+          }
+          return inst;
+        }));
+        const target = institutions.find(i => i.id === reportedInstId);
+        showToast(`דווח חוסר ב${target?.name} - הסייעת ${target?.aideName} נעדרת.`);
+        setModalType(null);
+      };
+
+      // Handle Instant Relocation
+      const handleDirectRelocation = (sourceInst, targetInst) => {
+        setInstitutions(prev => prev.map(item => {
+          if (item.id === targetInst.id) {
+            return {
+              ...item,
+              status: 'balanced',
+              absenceDetail: `מולא ע"י הסייעת ${sourceInst.aideName} מ${sourceInst.name}`
+            };
+          }
+          if (item.id === sourceInst.id) {
+            return {
+              ...item,
+              absenceDetail: `${item.absenceDetail} - נוידה ל${targetInst.name}`
+            };
+          }
+          return item;
+        }));
+
+        // Trigger WhatsApp/SMS Mock
+        const message = `בוקר טוב ${sourceInst.aideName}, תלמידך נעדר היום. שובצת לתגבור ב${targetInst.type} "${targetInst.name}" ברחוב ${targetInst.street} (איש קשר: ${targetInst.leadStaff}, טלפון: ${targetInst.staffPhone}). תודה על ההתגייסות!`;
+        const waUrl = `https://wa.me/972${sourceInst.aidePhone.replace(/[^0-9]/g, '').slice(1)}?text=${encodeURIComponent(message)}`;
+        
+        window.open(waUrl, '_blank');
+        showToast(`הסייעת ${sourceInst.aideName} שובצה בהצלחה ל${targetInst.name}! הודעה הופקה בוואטסאפ.`);
+        setModalType(null);
+      };
+
+      // Filtered Institutions
+      const filteredList = useMemo(() => {
+        return institutions.filter(inst => {
+          const matchType = filterType === 'all' || inst.type === filterType;
+          const matchStatus = filterStatus === 'all' || inst.status === filterStatus;
+          const matchSearch = 
+            inst.name.includes(searchQuery) ||
+            inst.street.includes(searchQuery) ||
+            inst.aideName.includes(searchQuery) ||
+            inst.studentOrTarget.includes(searchQuery) ||
+            inst.leadStaff.includes(searchQuery);
+          return matchType && matchStatus && matchSearch;
+        });
+      }, [institutions, filterType, filterStatus, searchQuery]);
+
+      // Counts
+      const balancedCount = institutions.filter(i => i.status === 'balanced').length;
+      const shortageCount = institutions.filter(i => i.status === 'shortage').length;
+      const freedCount = institutions.filter(i => i.status === 'freed').length;
+
+      return (
+        <div className="h-screen w-screen flex flex-col bg-slate-100 overflow-hidden select-none">
+          
+          {/* Top Main Navigation Bar */}
+          <header className="bg-slate-900 text-white px-5 py-3 border-b border-slate-800 flex-shrink-0 shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-xl shadow-lg border border-blue-400">
+                  ק״ב
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-black tracking-tight text-white">קריית ביאליק — משרד החינוך</h1>
+                    <span className="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-md border border-blue-400/30 font-medium">
+                      אגף החינוך • ניוד סייעות עירוני
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">ניהול נוכחות ושיבוץ סייעות שילוב וגנים בזמן אמת</p>
+                </div>
+              </div>
+
+              {/* Status Badges & Quick Action Buttons */}
+              <div className="flex items-center flex-wrap gap-2">
+                <div className="flex items-center bg-slate-800/80 px-3 py-1 rounded-xl border border-slate-700 text-xs gap-3 text-slate-200">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> מאוזן: <strong>{balancedCount}</strong></span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> חוסר: <strong className="text-rose-400">{shortageCount}</strong></span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> פנויות לניוד: <strong className="text-blue-400">{freedCount}</strong></span>
+                </div>
+
+                <button
+                  onClick={() => setModalType('student')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5"
+                >
+                  <span>👶</span>
+                  <span>דיווח הורים (היעדרות תלמיד)</span>
+                </button>
+
+                <button
+                  onClick={() => setModalType('aide')}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5"
+                >
+                  <span>👩‍🏫</span>
+                  <span>דיווח צוות (היעדרות סייעת)</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Toast Notification */}
+          {notificationToast && (
+            <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-2xl border border-blue-400 flex items-center gap-2 animate-bounce">
+              <span>🔔</span>
+              <span>{notificationToast}</span>
+            </div>
+          )}
+
+          {/* Main Content Area - Split 50% / 50% */}
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            
+            {/* RIGHT PANEL (50%): Interactive kiryat bialik map */}
+            <div className="w-full md:w-1/2 h-1/2 md:h-full bg-white border-l border-slate-200 flex flex-col relative overflow-hidden">
+              
+              {/* Map Controls Header */}
+              <div className="p-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>🗺️</span>
+                    <span>מפת מוסדות חינוך — קריית ביאליק</span>
+                  </h2>
+                  <p className="text-[11px] text-slate-500">לחיצה על מוסד מציגה פרטים ומאפשרת ניוד מיידי</p>
+                </div>
+                
+                {/* Visual Legend */}
+                <div className="flex items-center gap-3 text-[11px] bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> מאוזן ומאויש</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> דרושה סייעת</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-600"></span> סייעת פנויה</span>
+                </div>
+              </div>
+
+              {/* Graphical Simulated City Map */}
+              <div className="flex-1 relative bg-slate-100 overflow-hidden flex items-center justify-center">
+                
+                {/* SVG Street Grid Backdrop */}
+                <svg className="absolute inset-0 w-full h-full stroke-slate-300/70" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="streetGrid" width="60" height="60" patternUnits="userSpaceOnUse">
+                      <path d="M 60 0 L 0 0 0 60" fill="none" strokeWidth="1" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#streetGrid)" />
+                  
+                  {/* Simulated main transport arteries (כביש 4, קרן היסוד, ירושלים) */}
+                  <path d="M 120 0 L 150 600" stroke="#cbd5e1" strokeWidth="6" />
+                  <path d="M 0 350 Q 250 320 650 380" stroke="#94a3b8" strokeWidth="4" strokeDasharray="8,5" />
+                  <path d="M 280 0 L 320 600" stroke="#94a3b8" strokeWidth="3" />
+                  <path d="M 0 160 Q 300 200 650 140" stroke="#cbd5e1" strokeWidth="4" />
+                </svg>
+
+                {/* Neighborhood Zone Labels */}
+                <div className="absolute top-6 right-8 text-[11px] font-bold text-slate-400 bg-white/70 px-2 py-0.5 rounded border border-slate-200 pointer-events-none">
+                  צור שלום
+                </div>
+                <div className="absolute top-1/4 left-10 text-[11px] font-bold text-slate-400 bg-white/70 px-2 py-0.5 rounded border border-slate-200 pointer-events-none">
+                  שכונת הפרפר
+                </div>
+                <div className="absolute top-1/2 right-12 text-[11px] font-bold text-slate-400 bg-white/70 px-2 py-0.5 rounded border border-slate-200 pointer-events-none">
+                  סביניה
+                </div>
+                <div className="absolute bottom-1/4 left-12 text-[11px] font-bold text-slate-400 bg-white/70 px-2 py-0.5 rounded border border-slate-200 pointer-events-none">
+                  ביאליק דרום
+                </div>
+                <div className="absolute bottom-10 right-10 text-[11px] font-bold text-slate-400 bg-white/70 px-2 py-0.5 rounded border border-slate-200 pointer-events-none">
+                  גבעת הרקפות
+                </div>
+
+                {/* Pins on the Map */}
+                {institutions.map(inst => {
+                  const isSelected = selectedInstitution?.id === inst.id;
+                  let pinBg = 'bg-emerald-500 ring-emerald-200';
+                  let icon = '✓';
+
+                  if (inst.status === 'shortage') {
+                    pinBg = 'bg-rose-500 ring-rose-300 animate-bounce';
+                    icon = '!';
+                  } else if (inst.status === 'freed') {
+                    pinBg = 'bg-blue-600 ring-blue-300';
+                    icon = '⚡';
+                  }
+
+                  return (
+                    <div
+                      key={inst.id}
+                      onClick={() => setSelectedInstitution(inst)}
+                      style={{ left: `${inst.x}%`, top: `${inst.y}%` }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-10 transition-all duration-200"
+                    >
+                      <div className={`w-8 h-8 rounded-full ${pinBg} text-white font-black text-xs flex items-center justify-center shadow-lg ring-4 transition-transform group-hover:scale-125 ${isSelected ? 'scale-125 ring-8 ring-indigo-400' : ''}`}>
+                        {icon}
+                      </div>
+
+                      {/* Tooltip on hover */}
+                      <div className="absolute bottom-9 right-1/2 translate-x-1/2 bg-slate-900 text-white text-[11px] px-2.5 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none shadow-xl border border-slate-700">
+                        <p className="font-bold">{inst.type} {inst.name}</p>
+                        <p className="text-slate-300">{inst.street}</p>
+                        <p className={`font-semibold text-[10px] ${inst.status === 'shortage' ? 'text-rose-400' : inst.status === 'freed' ? 'text-blue-300' : 'text-emerald-400'}`}>
+                          {inst.status === 'shortage' ? 'חוסר בסייעת' : inst.status === 'freed' ? 'סייעת פנויה לניוד' : 'מאויש'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Floating details overlay for selected institution */}
+                {selectedInstitution && (
+                  <div className="absolute bottom-4 inset-x-4 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 text-xs z-30 animate-fadeIn">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-slate-900">{selectedInstitution.type} {selectedInstitution.name}</span>
+                          <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">{selectedInstitution.neighborhood}</span>
+                        </div>
+                        <p className="text-slate-500 mt-0.5">📍 {selectedInstitution.street}</p>
+                        <p className="text-slate-700 mt-1">
+                          צוות מוביל: <strong>{selectedInstitution.leadStaff}</strong> | סייעת: <strong>{selectedInstitution.aideName} ({selectedInstitution.aidePhone})</strong>
+                        </p>
+                        <p className="text-slate-700">
+                          יעד/תלמיד: <strong>{selectedInstitution.studentOrTarget}</strong>
+                        </p>
+                        {selectedInstitution.absenceDetail && (
+                          <p className="text-rose-600 font-bold mt-1">
+                            ⚠️ {selectedInstitution.absenceDetail}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => setSelectedInstitution(null)}
+                        className="text-slate-400 hover:text-slate-600 text-base font-bold p-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Quick action button inside card if in shortage or freed */}
+                    {selectedInstitution.status === 'freed' && (
+                      <div className="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between">
+                        <span className="text-blue-700 font-bold">הסייעת פנויה! שייך אותה לגן שחסר בו צוות:</span>
+                        <button
+                          onClick={() => {
+                            setActiveAideToRelocate(selectedInstitution);
+                            setModalType('relocate');
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-xl shadow"
+                        >
+                          נייד את {selectedInstitution.aideName} 🚀
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* LEFT PANEL (50%): Filterable Table & Relocation List */}
+            <div className="w-full md:w-1/2 h-1/2 md:h-full bg-slate-50 flex flex-col overflow-hidden">
+              
+              {/* Filter and Search Bar */}
+              <div className="p-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="חיפוש גן, כיתה, סייעת, תלמיד, רחוב..."
+                    className="w-full text-xs border border-slate-300 rounded-xl px-3 py-2 pr-8 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="absolute right-2.5 top-2 text-slate-400 text-xs">🔍</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="border border-slate-300 rounded-xl px-2.5 py-1.5 bg-slate-50 text-xs font-semibold text-slate-700"
+                  >
+                    <option value="all">כל המוסדות</option>
+                    <option value="גן">גנים בלבד</option>
+                    <option value="כיתה">כיתות בלבד</option>
+                  </select>
+
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="border border-slate-300 rounded-xl px-2.5 py-1.5 bg-slate-50 text-xs font-semibold text-slate-700"
+                  >
+                    <option value="all">כל הסטטוסים</option>
+                    <option value="shortage">🔴 חוסר בסייעת</option>
+                    <option value="freed">🔵 סייעת פנויה לניוד</option>
+                    <option value="balanced">🟢 מאוזן ומאויש</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Table Container with Smooth Vertical Scroll */}
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-right border-collapse text-xs">
+                  <thead className="bg-slate-100 text-slate-600 font-bold sticky top-0 border-b border-slate-200 z-10">
+                    <tr>
+                      <th className="p-3">מוסד</th>
+                      <th className="p-3">כתובת</th>
+                      <th className="p-3">גננת / רכז</th>
+                      <th className="p-3">סייעת וטלפון</th>
+                      <th className="p-3">תלמיד / ייעוד</th>
+                      <th className="p-3">סטטוס ונוכחות</th>
+                      <th className="p-3 text-center">פעולה</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white font-medium">
+                    {filteredList.map(inst => {
+                      const isAbsent = inst.status === 'freed' || inst.status === 'shortage';
+                      const isFreed = inst.status === 'freed';
+                      const isShortage = inst.status === 'shortage';
+
+                      return (
+                        <tr 
+                          key={inst.id} 
+                          className={`hover:bg-blue-50/50 transition-colors ${
+                            selectedInstitution?.id === inst.id ? 'bg-blue-50' : ''
+                          } ${isAbsent ? 'bg-red-50/20' : ''}`}
+                        >
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full ${
+                                isShortage ? 'bg-rose-500' : isFreed ? 'bg-blue-600' : 'bg-emerald-500'
+                              }`}></span>
+                              <span>{inst.name}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500">{inst.type}</span>
+                          </td>
+
+                          <td className="p-3 text-slate-600">
+                            <div>{inst.street}</div>
+                            <div className="text-[10px] text-slate-400">{inst.neighborhood}</div>
+                          </td>
+
+                          <td className="p-3 text-slate-700">
+                            <div>{inst.leadStaff}</div>
+                            <a href={`tel:${inst.staffPhone}`} className="text-[10px] text-blue-600 hover:underline">{inst.staffPhone}</a>
+                          </td>
+
+                          <td className="p-3 text-slate-700">
+                            <div className="font-bold">{inst.aideName}</div>
+                            <a 
+                              href={`https://wa.me/972${inst.aidePhone.replace(/[^0-9]/g, '').slice(1)}`}
+                              target="_blank"
+                              className="text-[10px] text-emerald-600 hover:underline flex items-center gap-1"
+                            >
+                              <span>📱</span>
+                              <span>{inst.aidePhone}</span>
+                            </a>
+                          </td>
+
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                              {inst.studentOrTarget}
+                            </span>
+                          </td>
+
+                          <td className="p-3">
+                            {isShortage && (
+                              <div className="text-rose-600 font-bold leading-tight">
+                                <div>🔴 חוסר (דרושה סייעת)</div>
+                                <div className="text-[10px] text-rose-500 font-normal">{inst.absenceDetail}</div>
+                              </div>
+                            )}
+
+                            {isFreed && (
+                              <div className="text-blue-700 font-bold leading-tight">
+                                <div>🔵 סייעת התפנתה לניוד!</div>
+                                <div className="text-[10px] text-blue-600 font-normal">{inst.absenceDetail}</div>
+                              </div>
+                            )}
+
+                            {inst.status === 'balanced' && (
+                              <div className="text-emerald-700 font-bold flex items-center gap-1">
+                                <span>🟢</span>
+                                <span>מאוזן ומאויש</span>
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="p-3 text-center">
+                            {isFreed ? (
+                              <button
+                                onClick={() => {
+                                  setActiveAideToRelocate(inst);
+                                  setModalType('relocate');
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-lg shadow whitespace-nowrap transition"
+                              >
+                                נייד סייעת
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setSelectedInstitution(inst)}
+                                className="text-slate-500 hover:text-slate-800 text-[11px] px-2 py-1 rounded bg-slate-100 hover:bg-slate-200"
+                              >
+                                צפה במפה
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* MODAL 1: Parent Absence Report */}
+          {modalType === 'student' && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">👶</span>
+                    <h3 className="font-bold text-base text-slate-900">דיווח הורים: היעדרות תלמיד/ה</h3>
+                  </div>
+                  <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                </div>
+
+                <form onSubmit={handleStudentReportSubmit} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">בחר/י גן / כיתה ותלמיד:</label>
+                    <select
+                      value={reportedInstId}
+                      onChange={(e) => setReportedInstId(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 font-medium"
+                    >
+                      {institutions.map(i => (
+                        <option key={i.id} value={i.id}>
+                          {i.type} {i.name} — תלמיד: {i.studentOrTarget} (סייעת: {i.aideName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">סיבת ההיעדרות:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['מחלה', 'חופשה', 'סיבה אישית'].map(reason => (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() => setAbsenceReason(reason)}
+                          className={`py-2 rounded-xl font-bold border transition ${
+                            absenceReason === reason ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">עד איזה תאריך?</label>
+                    <input
+                      type="text"
+                      value={absenceUntil}
+                      onChange={(e) => setAbsenceUntil(e.target.value)}
+                      placeholder="לדוגמה: 22/09"
+                      className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50"
+                    />
+                  </div>
+
+                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-blue-900 text-[11px] leading-relaxed">
+                    💡 <strong>ללא סיסמה:</strong> הדיווח ישחרר אוטומטית את הסייעת לניוד עירוני למקום שזקוק לתגבור, ויעדכן את המפה באדום/כחול.
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition"
+                  >
+                    אשר ושחרר סייעת לניוד
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL 2: Aide Absence Report */}
+          {modalType === 'aide' && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">👩‍🏫</span>
+                    <h3 className="font-bold text-base text-slate-900">דיווח צוות: היעדרות סייעת</h3>
+                  </div>
+                  <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                </div>
+
+                <form onSubmit={handleAideReportSubmit} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">איזו סייעת נעדרת?</label>
+                    <select
+                      value={reportedInstId}
+                      onChange={(e) => setReportedInstId(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 font-medium"
+                    >
+                      {institutions.map(i => (
+                        <option key={i.id} value={i.id}>
+                          {i.aideName} ({i.type} {i.name} - {i.street})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">סיבת היעדרות:</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['מחלה', 'חופשה', 'אחר'].map(reason => (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() => setAbsenceReason(reason)}
+                          className={`py-2 rounded-xl font-bold border transition ${
+                            absenceReason === reason ? 'bg-rose-600 text-white border-rose-600' : 'bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">היעדרות צפויה עד:</label>
+                    <input
+                      type="text"
+                      value={absenceUntil}
+                      onChange={(e) => setAbsenceUntil(e.target.value)}
+                      placeholder="לדוגמה: 21/09"
+                      className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 rounded-xl shadow-lg transition"
+                  >
+                    עדכן חוסר בגן/כיתה
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL 3: Relocation Dispatcher with Instant WhatsApp Alert */}
+          {modalType === 'relocate' && activeAideToRelocate && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-fadeIn">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900">
+                      שיבוץ וניוד מהיר: הסייעת {activeAideToRelocate.aideName}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      גן מקור: {activeAideToRelocate.name} ({activeAideToRelocate.street})
+                    </p>
+                  </div>
+                  <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <span className="font-bold text-slate-700 block">בחר/י לאיזה מוסד בחוסר לנייד אותה:</span>
+                  
+                  {institutions.filter(i => i.status === 'shortage').length === 0 ? (
+                    <div className="p-4 bg-emerald-50 text-emerald-800 rounded-2xl text-center font-bold">
+                      🎉 כל הגנים ובתי הספר בקריית ביאליק מאוישים כעת במלואם!
+                    </div>
+                  ) : (
+                    institutions.filter(i => i.status === 'shortage').map(shortageInst => (
+                      <div
+                        key={shortageInst.id}
+                        className="bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-2xl p-3 flex items-center justify-between transition"
+                      >
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">{shortageInst.type} {shortageInst.name}</h4>
+                          <p className="text-slate-500">{shortageInst.street} ({shortageInst.neighborhood})</p>
+                          <p className="text-rose-600 font-medium text-[11px] mt-0.5">{shortageInst.absenceDetail}</p>
+                          <p className="text-slate-600 text-[11px]">איש קשר: {shortageInst.leadStaff} ({shortageInst.staffPhone})</p>
+                        </div>
+
+                        <button
+                          onClick={() => handleDirectRelocation(activeAideToRelocate, shortageInst)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl shadow transition text-xs flex items-center gap-1.5"
+                        >
+                          <span>שיבוץ + שליחת וואטסאפ</span>
+                          <span>🚀</span>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<App />);
+  </script>
+</body>
+</html>
